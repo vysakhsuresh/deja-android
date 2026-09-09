@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,12 +25,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,8 +47,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.DejaApplication
 import com.layerbit.deja.data.db.ShotEntity
+import com.layerbit.deja.data.index.IndexWorker
+import com.layerbit.deja.data.index.IndexingState
 import com.layerbit.deja.data.model.CleanupGroup
 import com.layerbit.deja.ui.components.DejaBottomBar
+import com.layerbit.deja.ui.components.DejaDialog
 import com.layerbit.deja.ui.components.ScreenHeader
 import com.layerbit.deja.ui.components.ShotThumbnail
 import com.layerbit.deja.ui.components.Tab
@@ -65,6 +73,7 @@ data class CleanupUiState(
 
     val selectedBytes: Long get() = selectedShots.sumOf { it.sizeBytes }
     val totalBytes: Long get() = groups.sumOf { it.bytes }
+    val allSelected: Boolean get() = groups.isNotEmpty() && selectedGroupIds.size == groups.size
 }
 
 class CleanupViewModel(app: Application) : AndroidViewModel(app) {
@@ -74,16 +83,19 @@ class CleanupViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(CleanupUiState())
     val state = _state.asStateFlow()
 
+    val indexing = IndexingState.progress
+
     /** Screenshots handed to the last trash request, kept so the index can drop them on success. */
     private var pending: List<ShotEntity> = emptyList()
 
-    fun load() {
+    fun load(keepFreed: Long? = null) {
         viewModelScope.launch {
             val groups = repository.cleanupGroups()
             _state.value = CleanupUiState(
                 groups = groups,
                 selectedGroupIds = groups.filter { it.selectedByDefault }.map { it.id }.toSet(),
-                loading = false
+                loading = false,
+                freedBytes = keepFreed
             )
         }
     }
@@ -93,6 +105,14 @@ class CleanupViewModel(app: Application) : AndroidViewModel(app) {
         val next = current.selectedGroupIds.toMutableSet()
         if (!next.add(groupId)) next.remove(groupId)
         _state.value = current.copy(selectedGroupIds = next)
+    }
+
+    fun toggleAll() {
+        val current = _state.value
+        _state.value = current.copy(
+            selectedGroupIds = if (current.allSelected) emptySet()
+            else current.groups.map { it.id }.toSet()
+        )
     }
 
     /**
@@ -112,14 +132,7 @@ class CleanupViewModel(app: Application) : AndroidViewModel(app) {
         pending = emptyList()
         viewModelScope.launch {
             repository.forgetMediaIds(trashed.map { it.mediaId })
-            val freed = trashed.sumOf { it.sizeBytes }
-            val groups = repository.cleanupGroups()
-            _state.value = CleanupUiState(
-                groups = groups,
-                selectedGroupIds = groups.filter { it.selectedByDefault }.map { it.id }.toSet(),
-                loading = false,
-                freedBytes = freed
-            )
+            load(keepFreed = trashed.sumOf { it.sizeBytes })
         }
     }
 
@@ -131,12 +144,13 @@ class CleanupViewModel(app: Application) : AndroidViewModel(app) {
 @Composable
 fun CleanupScreen(
     onBack: () -> Unit,
-    onOpenTimeline: () -> Unit,
-    onOpenPrivacy: () -> Unit,
+    onSelectTab: (Tab) -> Unit,
     viewModel: CleanupViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val indexing by viewModel.indexing.collectAsState()
     val context = LocalContext.current
+    var confirmRescan by remember { mutableStateOf(false) }
 
     val trashLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
@@ -148,16 +162,54 @@ fun CleanupScreen(
         }
     }
 
-    LaunchedEffect(Unit) { viewModel.load() }
+    // Groups are derived from the index, so they are stale the moment a scan adds to it. This
+    // also covers the initial load, since the phase is read on first composition.
+    LaunchedEffect(indexing.phase) {
+        if (!indexing.running) viewModel.load(keepFreed = state.freedBytes)
+    }
+
+    if (confirmRescan) {
+        DejaDialog(
+            title = "A scan is already running",
+            message = "Deja has read ${indexing.done} of ${indexing.total} screenshots. " +
+                "Starting again from the top throws that progress away and re-reads everything.",
+            confirmLabel = "Start over anyway",
+            destructive = true,
+            onConfirm = {
+                confirmRescan = false
+                IndexWorker.restart(context)
+            },
+            onDismiss = { confirmRescan = false }
+        )
+    }
 
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader(title = "Clean up", onBack = onBack)
+        ScreenHeader(
+            title = "Clean up",
+            onBack = onBack,
+            trailing = {
+                Box(
+                    modifier = Modifier
+                        .size(TapTarget)
+                        .clickable {
+                            if (indexing.running) confirmRescan = true
+                            else IndexWorker.restart(context)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = "Scan again",
+                        tint = DejaColors.Muted,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+        )
 
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = 20.dp, end = 20.dp, bottom = 20.dp
-            ),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
@@ -170,10 +222,10 @@ fun CleanupScreen(
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = if (state.loading) {
-                            "Working out what's safe to remove…"
-                        } else {
-                            "Tap a group to include or exclude it"
+                        text = when {
+                            state.loading -> "Working out what's safe to remove…"
+                            indexing.running -> "Still reading — this will grow as Deja catches up"
+                            else -> "Tap a group to include or exclude it"
                         },
                         color = DejaColors.Dim,
                         fontSize = 12.5.sp
@@ -187,7 +239,20 @@ fun CleanupScreen(
                             fontWeight = FontWeight.Medium
                         )
                     }
-                    Spacer(Modifier.height(14.dp))
+                    if (state.groups.isNotEmpty()) {
+                        Spacer(Modifier.height(14.dp))
+                        Text(
+                            text = if (state.allSelected) "Clear all" else "Select all groups",
+                            color = DejaColors.Amber,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { viewModel.toggleAll() }
+                                .padding(vertical = 8.dp, horizontal = 2.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
                 }
             }
 
@@ -250,13 +315,7 @@ fun CleanupScreen(
             }
         }
 
-        DejaBottomBar(current = Tab.CLEAN) { tab ->
-            when (tab) {
-                Tab.TIMELINE -> onOpenTimeline()
-                Tab.CLEAN -> Unit
-                Tab.PRIVACY -> onOpenPrivacy()
-            }
-        }
+        DejaBottomBar(current = Tab.CLEAN, onSelect = onSelectTab)
     }
 }
 

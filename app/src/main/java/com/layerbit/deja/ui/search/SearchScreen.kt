@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -50,15 +52,28 @@ import com.layerbit.deja.data.model.Category
 import com.layerbit.deja.ui.components.ScreenHeader
 import com.layerbit.deja.ui.components.ShotThumbnail
 import com.layerbit.deja.ui.theme.DejaColors
+import com.layerbit.deja.ui.theme.SpaceGrotesk
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
+
+/**
+ * Starting points that map onto what the index actually holds. They are here because a blank
+ * search box gives no clue what Deja can find, and "wifi password" teaches the tool in a way no
+ * placeholder text does.
+ */
+private val suggestions = listOf(
+    "otp", "wifi password", "receipt", "boarding pass", "aadhaar", "amount", "booking"
+)
 
 class SearchViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -71,9 +86,7 @@ class SearchViewModel(app: Application) : AndroidViewModel(app) {
     val results = _query
         .debounce(200)
         .flatMapLatest { raw ->
-            flow {
-                emit(if (raw.isBlank()) emptyList() else repository.search(raw))
-            }
+            flow { emit(if (raw.isBlank()) emptyList() else repository.search(raw)) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -121,7 +134,7 @@ fun SearchScreen(
             Box(Modifier.weight(1f)) {
                 if (query.isEmpty()) {
                     Text(
-                        text = "wifi password, receipt, boarding pass…",
+                        text = "words, an app, a category…",
                         color = DejaColors.Dim,
                         fontSize = 15.sp
                     )
@@ -130,7 +143,11 @@ fun SearchScreen(
                     value = query,
                     onValueChange = viewModel::onQueryChange,
                     singleLine = true,
-                    textStyle = TextStyle(color = DejaColors.Text, fontSize = 15.sp),
+                    textStyle = TextStyle(
+                        color = DejaColors.Text,
+                        fontSize = 15.sp,
+                        fontFamily = SpaceGrotesk
+                    ),
                     cursorBrush = SolidColor(DejaColors.Amber),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -141,15 +158,41 @@ fun SearchScreen(
 
         Spacer(Modifier.height(14.dp))
 
+        if (query.isBlank()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                suggestions.forEach { hint ->
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(DejaColors.Surface)
+                                .clickable { viewModel.onQueryChange(hint) }
+                                .padding(horizontal = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = hint, color = DejaColors.Muted, fontSize = 13.5.sp)
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+        }
+
         Text(
             text = when {
-                query.isBlank() -> "Deja searches the words inside your screenshots."
+                query.isBlank() -> "Deja searches the words inside your screenshots, plus the app " +
+                    "each one came from."
                 results.isEmpty() -> "No matches on this device."
                 results.size == 1 -> "1 match · searched on this device"
                 else -> "${results.size} matches · searched on this device"
             },
             color = DejaColors.Dim,
             fontSize = 12.5.sp,
+            lineHeight = 18.sp,
             modifier = Modifier.padding(horizontal = 20.dp)
         )
 
@@ -157,17 +200,11 @@ fun SearchScreen(
             modifier = Modifier
                 .weight(1f)
                 .navigationBarsPadding(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = 20.dp, end = 20.dp, top = 14.dp, bottom = 24.dp
-            ),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(results, key = { it.id }) { shot ->
-                ResultCard(
-                    shot = shot,
-                    query = query,
-                    onClick = { onOpenShot(shot.id) }
-                )
+                ResultCard(shot = shot, query = query, onClick = { onOpenShot(shot.id) })
             }
         }
     }
@@ -192,12 +229,24 @@ private fun ResultCard(shot: ShotEntity, query: String, onClick: () -> Unit) {
         )
         Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
-            Text(
-                text = Category.fromId(shot.category).label,
-                color = DejaColors.Amber,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = Category.fromId(shot.category).label,
+                    color = DejaColors.Amber,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (shot.sourceApp.isNotEmpty()) {
+                    Spacer(Modifier.width(7.dp))
+                    Text(text = shot.sourceApp, color = DejaColors.Muted, fontSize = 11.sp)
+                }
+                Spacer(Modifier.width(7.dp))
+                Text(
+                    text = shot.dateTakenMillis.asShortDate(),
+                    color = DejaColors.Dim,
+                    fontSize = 11.sp
+                )
+            }
             Spacer(Modifier.height(6.dp))
             Text(
                 text = snippet(shot.text, query),
@@ -216,9 +265,7 @@ private fun snippet(text: String, query: String, radius: Int = 60): String {
     if (flat.isEmpty()) return "No readable text"
 
     val hit = SearchQuery.tokenise(query)
-        .mapNotNull { token ->
-            flat.indexOf(token, ignoreCase = true).takeIf { it >= 0 }
-        }
+        .mapNotNull { token -> flat.indexOf(token, ignoreCase = true).takeIf { it >= 0 } }
         .minOrNull() ?: return flat.take(radius * 2)
 
     val start = (hit - radius).coerceAtLeast(0)
@@ -227,3 +274,8 @@ private fun snippet(text: String, query: String, radius: Int = 60): String {
     val suffix = if (end < flat.length) "…" else ""
     return prefix + flat.substring(start, end) + suffix
 }
+
+private val shortDate = DateTimeFormatter.ofPattern("d MMM")
+
+private fun Long.asShortDate(): String =
+    Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).toLocalDate().format(shortDate)

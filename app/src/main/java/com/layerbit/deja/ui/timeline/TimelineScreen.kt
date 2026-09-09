@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -27,11 +28,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,8 +41,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.DejaApplication
+import com.layerbit.deja.data.db.AppCount
 import com.layerbit.deja.data.db.ShotEntity
+import com.layerbit.deja.data.index.IndexWorker
+import com.layerbit.deja.data.index.IndexProgress
 import com.layerbit.deja.data.index.IndexingState
+import com.layerbit.deja.data.index.ScanPhase
 import com.layerbit.deja.data.model.Category
 import com.layerbit.deja.ui.components.DejaBottomBar
 import com.layerbit.deja.ui.components.ScreenHeader
@@ -63,12 +69,19 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/** What the grid is narrowed to. Category and app are mutually exclusive by design. */
+sealed interface TimelineFilter {
+    data object All : TimelineFilter
+    data class OfCategory(val category: Category) : TimelineFilter
+    data class FromApp(val app: String) : TimelineFilter
+}
+
 class TimelineViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repository = (app as DejaApplication).repository
 
-    private val _selected = MutableStateFlow<Category?>(null)
-    val selected = _selected.asStateFlow()
+    private val _filter = MutableStateFlow<TimelineFilter>(TimelineFilter.All)
+    val filter = _filter.asStateFlow()
 
     private val _reclaimable = MutableStateFlow(0L)
     val reclaimable = _reclaimable.asStateFlow()
@@ -82,10 +95,17 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
         .map { rows -> rows.associate { Category.fromId(it.category) to it.count } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
+    val apps = repository.observeAppCounts()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val shots = _selected
-        .flatMapLatest { category ->
-            if (category == null) repository.observeRecent() else repository.observeByCategory(category)
+    val shots = _filter
+        .flatMapLatest { current ->
+            when (current) {
+                is TimelineFilter.All -> repository.observeRecent()
+                is TimelineFilter.OfCategory -> repository.observeByCategory(current.category)
+                is TimelineFilter.FromApp -> repository.observeByApp(current.app)
+            }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -93,8 +113,20 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
         refreshReclaimable()
     }
 
-    fun select(category: Category?) {
-        _selected.value = if (_selected.value == category) null else category
+    fun selectCategory(category: Category?) {
+        val current = _filter.value
+        _filter.value = when {
+            category == null -> TimelineFilter.All
+            current is TimelineFilter.OfCategory && current.category == category -> TimelineFilter.All
+            else -> TimelineFilter.OfCategory(category)
+        }
+    }
+
+    fun selectApp(app: String) {
+        val current = _filter.value
+        _filter.value =
+            if (current is TimelineFilter.FromApp && current.app == app) TimelineFilter.All
+            else TimelineFilter.FromApp(app)
     }
 
     fun refreshReclaimable() {
@@ -108,26 +140,28 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
 fun TimelineScreen(
     onOpenSearch: () -> Unit,
     onOpenShot: (Long) -> Unit,
-    onOpenCleanup: () -> Unit,
-    onOpenPrivacy: () -> Unit,
+    onSelectTab: (Tab) -> Unit,
     viewModel: TimelineViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val shots by viewModel.shots.collectAsState()
     val counts by viewModel.counts.collectAsState()
+    val apps by viewModel.apps.collectAsState()
     val total by viewModel.total.collectAsState()
-    val selected by viewModel.selected.collectAsState()
+    val filter by viewModel.filter.collectAsState()
     val reclaimable by viewModel.reclaimable.collectAsState()
     val indexing by viewModel.indexing.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader(title = "deja", trailing = { SettingsButton(onClick = onOpenPrivacy) })
+        ScreenHeader(
+            title = "deja",
+            trailing = { SettingsButton(onClick = { onSelectTab(Tab.PRIVACY) }) }
+        )
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             modifier = Modifier.weight(1f),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = 20.dp, end = 20.dp, bottom = 24.dp
-            ),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -136,21 +170,27 @@ fun TimelineScreen(
                     SearchField(onClick = onOpenSearch)
                     Spacer(Modifier.height(14.dp))
 
-                    if (indexing.running && indexing.hasWork) {
-                        IndexingBanner(done = indexing.done, total = indexing.total)
-                        Spacer(Modifier.height(14.dp))
-                    }
+                    ScanBanner(
+                        progress = indexing,
+                        onStop = { IndexWorker.stop(context) },
+                        onResume = { IndexWorker.enqueue(context) }
+                    )
 
                     if (reclaimable > 0) {
-                        ReclaimBanner(bytes = reclaimable, onReview = onOpenCleanup)
+                        ReclaimBanner(
+                            bytes = reclaimable,
+                            onReview = { onSelectTab(Tab.CLEAN) }
+                        )
                         Spacer(Modifier.height(14.dp))
                     }
 
-                    CategoryChips(
+                    FilterChips(
                         total = total,
                         counts = counts,
-                        selected = selected,
-                        onSelect = viewModel::select
+                        apps = apps,
+                        filter = filter,
+                        onSelectCategory = viewModel::selectCategory,
+                        onSelectApp = viewModel::selectApp
                     )
                     Spacer(Modifier.height(6.dp))
                 }
@@ -162,7 +202,6 @@ fun TimelineScreen(
                 }
             }
 
-            // One header per day, then that day's screenshots.
             shots.groupBy { it.dateTakenMillis.toLocalDate() }
                 .forEach { (day, shotsForDay) ->
                     item(span = { GridItemSpan(maxLineSpan) }) {
@@ -174,13 +213,7 @@ fun TimelineScreen(
                 }
         }
 
-        DejaBottomBar(current = Tab.TIMELINE) { tab ->
-            when (tab) {
-                Tab.TIMELINE -> Unit
-                Tab.CLEAN -> onOpenCleanup()
-                Tab.PRIVACY -> onOpenPrivacy()
-            }
-        }
+        DejaBottomBar(current = Tab.TIMELINE, onSelect = onSelectTab)
     }
 }
 
@@ -203,45 +236,87 @@ private fun SearchField(onClick: () -> Unit) {
             modifier = Modifier.size(19.dp)
         )
         Spacer(Modifier.size(11.dp))
-        Text(
-            text = "Search your screenshots",
-            color = DejaColors.Dim,
-            fontSize = 15.sp
-        )
+        Text(text = "Search your screenshots", color = DejaColors.Dim, fontSize = 15.sp)
     }
 }
 
 @Composable
-private fun IndexingBanner(done: Int, total: Int) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(DejaColors.Surface)
-            .padding(14.dp)
-    ) {
-        Text(
-            text = "Reading your screenshots",
-            color = DejaColors.Text,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "$done of $total",
-            color = DejaColors.Muted,
-            fontSize = 12.5.sp
-        )
-        Spacer(Modifier.height(10.dp))
-        LinearProgressIndicator(
-            progress = { if (total == 0) 0f else done.toFloat() / total },
-            color = DejaColors.Amber,
-            trackColor = DejaColors.BorderStrong,
+private fun ScanBanner(progress: IndexProgress, onStop: () -> Unit, onResume: () -> Unit) {
+    if (progress.phase == ScanPhase.IDLE || progress.phase == ScanPhase.FINISHED) return
+
+    Column {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(4.dp)
-                .clip(RoundedCornerShape(3.dp))
-        )
+                .clip(RoundedCornerShape(16.dp))
+                .background(DejaColors.Surface)
+                .padding(14.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = when (progress.phase) {
+                            ScanPhase.SCANNING -> "Looking for screenshots"
+                            ScanPhase.STOPPED -> "Scan stopped"
+                            else -> "Reading your screenshots"
+                        },
+                        color = DejaColors.Text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = if (progress.total == 0) {
+                            "Just a moment"
+                        } else {
+                            "${progress.done} of ${progress.total} read" +
+                                if (progress.phase == ScanPhase.STOPPED) {
+                                    " · ${progress.remaining} left"
+                                } else {
+                                    ""
+                                }
+                        },
+                        color = DejaColors.Muted,
+                        fontSize = 12.5.sp
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .height(TapTarget - 8.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(
+                            if (progress.phase == ScanPhase.STOPPED) DejaColors.Amber
+                            else DejaColors.BorderStrong
+                        )
+                        .clickable(
+                            onClick = if (progress.phase == ScanPhase.STOPPED) onResume else onStop
+                        )
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (progress.phase == ScanPhase.STOPPED) "Resume" else "Stop",
+                        color = if (progress.phase == ScanPhase.STOPPED) DejaColors.OnAmber
+                        else DejaColors.Text,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+            if (progress.total > 0) {
+                Spacer(Modifier.height(12.dp))
+                LinearProgressIndicator(
+                    progress = { progress.fraction },
+                    color = DejaColors.Amber,
+                    trackColor = DejaColors.BorderStrong,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                )
+            }
+        }
+        Spacer(Modifier.height(14.dp))
     }
 }
 
@@ -289,52 +364,87 @@ private fun ReclaimBanner(bytes: Long, onReview: () -> Unit) {
 }
 
 @Composable
-private fun CategoryChips(
+private fun FilterChips(
     total: Int,
     counts: Map<Category, Int>,
-    selected: Category?,
-    onSelect: (Category?) -> Unit
+    apps: List<AppCount>,
+    filter: TimelineFilter,
+    onSelectCategory: (Category?) -> Unit,
+    onSelectApp: (String) -> Unit
 ) {
     val present = Category.entries.filter { (counts[it] ?: 0) > 0 }
 
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        item {
-            Chip(
-                label = "All",
-                count = total,
-                active = selected == null,
-                onClick = { onSelect(null) }
-            )
-        }
-        // item{} per chip rather than items(): it keeps the LazyRow overload of `items` out of
-        // this file, which would otherwise clash with the LazyVerticalGrid one used below.
-        present.forEach { category ->
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
                 Chip(
-                    label = category.label,
-                    count = counts[category] ?: 0,
-                    active = selected == category,
-                    onClick = { onSelect(category) }
+                    label = "All",
+                    count = total,
+                    active = filter is TimelineFilter.All,
+                    onClick = { onSelectCategory(null) }
                 )
+            }
+            present.forEach { category ->
+                item {
+                    Chip(
+                        label = category.label,
+                        count = counts[category] ?: 0,
+                        active = filter is TimelineFilter.OfCategory && filter.category == category,
+                        onClick = { onSelectCategory(category) }
+                    )
+                }
+            }
+        }
+
+        // Only worth a row of its own once the filenames actually carried app names.
+        if (apps.isNotEmpty()) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                apps.forEach { row ->
+                    item {
+                        Chip(
+                            label = row.sourceApp,
+                            count = row.count,
+                            active = filter is TimelineFilter.FromApp && filter.app == row.sourceApp,
+                            onClick = { onSelectApp(row.sourceApp) },
+                            accent = true
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun Chip(label: String, count: Int, active: Boolean, onClick: () -> Unit) {
+private fun Chip(
+    label: String,
+    count: Int,
+    active: Boolean,
+    onClick: () -> Unit,
+    accent: Boolean = false
+) {
     Row(
         modifier = Modifier
             .height(40.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(if (active) DejaColors.BorderStrong else DejaColors.Surface)
+            .background(
+                when {
+                    active && accent -> DejaColors.AmberDim
+                    active -> DejaColors.BorderStrong
+                    else -> DejaColors.Surface
+                }
+            )
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            color = if (active) DejaColors.Text else DejaColors.Muted,
+            color = when {
+                active && accent -> DejaColors.AmberBright
+                active -> DejaColors.Text
+                else -> DejaColors.Muted
+            },
             fontSize = 13.5.sp,
             fontWeight = if (active) FontWeight.Medium else FontWeight.Normal
         )

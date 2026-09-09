@@ -4,8 +4,10 @@ import android.app.PendingIntent
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
+import com.layerbit.deja.data.db.AppCount
 import com.layerbit.deja.data.db.CategoryCount
 import com.layerbit.deja.data.db.DejaDatabase
+import com.layerbit.deja.data.db.LibraryStats
 import com.layerbit.deja.data.db.ShotEntity
 import com.layerbit.deja.data.index.SearchQuery
 import com.layerbit.deja.data.model.Category
@@ -17,14 +19,23 @@ class ShotRepository(private val context: Context) {
 
     private val dao = DejaDatabase.get(context).shotDao()
 
-    fun observeRecent(limit: Int = 300): Flow<List<ShotEntity>> = dao.observeRecent(limit)
+    fun observeRecent(limit: Int = 400): Flow<List<ShotEntity>> = dao.observeRecent(limit)
 
-    fun observeByCategory(category: Category, limit: Int = 300): Flow<List<ShotEntity>> =
+    fun observeByCategory(category: Category, limit: Int = 400): Flow<List<ShotEntity>> =
         dao.observeByCategory(category.id, limit)
+
+    fun observeByApp(app: String, limit: Int = 400): Flow<List<ShotEntity>> =
+        dao.observeByApp(app, limit)
 
     fun observeCategoryCounts(): Flow<List<CategoryCount>> = dao.observeCategoryCounts()
 
+    fun observeAppCounts(limit: Int = 12): Flow<List<AppCount>> = dao.observeAppCounts(limit)
+
+    fun observeStats(): Flow<LibraryStats> = dao.observeStats()
+
     fun observeCount(): Flow<Int> = dao.observeCount()
+
+    suspend fun count(): Int = dao.count()
 
     suspend fun byId(id: Long): ShotEntity? = dao.byId(id)
 
@@ -40,7 +51,7 @@ class ShotRepository(private val context: Context) {
         return candidates
             .sortedWith(
                 compareByDescending<ShotEntity> { shot ->
-                    val haystack = shot.text.lowercase()
+                    val haystack = shot.searchBlob.lowercase()
                     tokens.count { haystack.contains(it) }
                 }.thenByDescending { it.dateTakenMillis }
             )
@@ -55,17 +66,21 @@ class ShotRepository(private val context: Context) {
         val now = System.currentTimeMillis()
         val claimed = mutableSetOf<Long>()
 
-        fun claim(shots: List<ShotEntity>): List<ShotEntity> =
-            shots.filter { claimed.add(it.id) }
+        fun claim(shots: List<ShotEntity>): List<ShotEntity> = shots.filter { claimed.add(it.id) }
 
         val oldCodes = claim(
             dao.olderThanInCategory(Category.CODE.id, now - TimeUnit.DAYS.toMillis(30))
         )
-        val oldForwards = claim(
-            dao.oldUncategorised(now - TimeUnit.DAYS.toMillis(180))
+        val oldChatter = claim(
+            dao.olderThanInCategories(
+                listOf(Category.OTHER.id, Category.CHAT.id, Category.SOCIAL.id, Category.MEDIA.id),
+                now - TimeUnit.DAYS.toMillis(180)
+            )
         )
         val duplicates = claim(redundantDuplicates())
         val unreadable = claim(dao.withLittleText(MIN_USEFUL_TEXT))
+        val ancient = claim(dao.olderThan(now - TimeUnit.DAYS.toMillis(365)))
+        val large = claim(dao.largerThan(LARGE_BYTES))
 
         return listOf(
             CleanupGroup(
@@ -76,10 +91,10 @@ class ShotRepository(private val context: Context) {
                 selectedByDefault = true
             ),
             CleanupGroup(
-                id = "old_forwards",
-                title = "Old forwards & chatter",
-                subtitle = "Nothing useful found, older than six months",
-                shots = oldForwards,
+                id = "old_chatter",
+                title = "Old chatter & forwards",
+                subtitle = "Chats, posts and clips older than six months",
+                shots = oldChatter,
                 selectedByDefault = true
             ),
             CleanupGroup(
@@ -94,6 +109,20 @@ class ShotRepository(private val context: Context) {
                 title = "No readable text",
                 subtitle = "Nothing Deja could read out of these",
                 shots = unreadable,
+                selectedByDefault = false
+            ),
+            CleanupGroup(
+                id = "ancient",
+                title = "Older than a year",
+                subtitle = "Everything else from before last year",
+                shots = ancient,
+                selectedByDefault = false
+            ),
+            CleanupGroup(
+                id = "large",
+                title = "Largest screenshots",
+                subtitle = "Over 2 MB each - check these before removing",
+                shots = large,
                 selectedByDefault = false
             )
         ).filter { it.shots.isNotEmpty() }
@@ -119,10 +148,12 @@ class ShotRepository(private val context: Context) {
     suspend fun clearIndex() = dao.clear()
 
     private companion object {
-        const val CANDIDATE_LIMIT = 300
-        const val RESULT_LIMIT = 60
+        const val CANDIDATE_LIMIT = 400
+        const val RESULT_LIMIT = 80
 
         /** Below this many characters there is nothing to search for or act on. */
         const val MIN_USEFUL_TEXT = 12
+
+        const val LARGE_BYTES = 2L * 1024 * 1024
     }
 }

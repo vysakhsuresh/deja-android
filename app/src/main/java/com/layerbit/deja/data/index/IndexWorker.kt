@@ -8,6 +8,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.layerbit.deja.data.db.DejaDatabase
 import com.layerbit.deja.data.db.ShotEntity
+import com.layerbit.deja.data.model.Category
 import com.layerbit.deja.data.model.ExtractedCodec
 import com.layerbit.deja.data.ocr.ScreenshotTextReader
 import com.layerbit.deja.data.scan.MediaStoreScanner
@@ -17,8 +18,12 @@ import kotlinx.coroutines.withContext
 
 /**
  * Reads any screenshot that is not in the index yet, and drops rows for screenshots that have
- * left the device. Runs on a background thread through WorkManager so it survives the app being
- * closed mid-scan; on a large library the first pass takes a while and that is fine.
+ * left the device. Runs through WorkManager so it survives the app being closed mid-scan; on a
+ * large library the first pass takes a while and that is fine.
+ *
+ * Stopping is a first-class outcome, not a failure. When the user stops a scan the work returns
+ * successfully with the index left exactly as far as it got, and the interrupted flag is what
+ * lets the next launch offer to resume from there instead of starting over.
  */
 class IndexWorker(
     context: Context,
@@ -29,22 +34,38 @@ class IndexWorker(
         val dao = DejaDatabase.get(applicationContext).shotDao()
         val scanner = MediaStoreScanner(applicationContext)
         val reader = ScreenshotTextReader(applicationContext)
+        val prefs = ScanPreferences(applicationContext)
+
+        prefs.markStarted()
+        IndexingState.scanning()
 
         try {
             val onDevice = scanner.scan()
             val onDeviceIds = onDevice.mapTo(mutableSetOf()) { it.mediaId }
-            val alreadyIndexed = dao.indexedMediaIds().toSet()
+            val indexed = dao.indexedMediaIds().toSet()
 
-            val removed = alreadyIndexed - onDeviceIds
+            val removed = indexed - onDeviceIds
             if (removed.isNotEmpty()) dao.deleteByMediaIds(removed.toList())
 
-            val pending = onDevice.filterNot { it.mediaId in alreadyIndexed }
-            IndexingState.start(pending.size)
+            // Progress is reported against the whole library, not just the unread part, so the
+            // number on screen always matches how many screenshots the device actually has.
+            val total = onDevice.size
+            var done = (indexed - removed).size
+            IndexingState.reading(done, total)
 
-            pending.forEachIndexed { position, shot ->
-                if (isStopped) return@withContext Result.retry()
+            val pending = onDevice.filterNot { it.mediaId in indexed }
+
+            for (shot in pending) {
+                if (isStopped) {
+                    IndexingState.stopped()
+                    return@withContext Result.success()
+                }
 
                 val text = reader.read(shot.uri).orEmpty()
+                val entities = EntityExtractor.extract(text)
+                val category = Classifier.classify(text, shot.displayName, entities)
+                val app = SourceApp.detect(shot.displayName).orEmpty()
+
                 dao.upsert(
                     ShotEntity(
                         mediaId = shot.mediaId,
@@ -54,20 +75,45 @@ class IndexWorker(
                         sizeBytes = shot.sizeBytes,
                         text = text,
                         textHash = if (text.isBlank()) "" else sha1(text),
-                        category = Classifier.classify(text).id,
-                        entitiesJson = ExtractedCodec.encode(EntityExtractor.extract(text)),
+                        category = category.id,
+                        sourceApp = app,
+                        entitiesJson = ExtractedCodec.encode(entities),
+                        searchBlob = buildSearchBlob(text, app, category, entities),
                         indexedAtMillis = System.currentTimeMillis()
                     )
                 )
-                IndexingState.advance(position + 1)
+                done++
+                IndexingState.advance(done)
             }
 
+            prefs.markFinished()
+            IndexingState.finished()
             Result.success()
         } catch (error: Exception) {
+            IndexingState.stopped()
             Result.retry()
         } finally {
             reader.close()
-            IndexingState.finish()
+        }
+    }
+
+    private fun buildSearchBlob(
+        text: String,
+        app: String,
+        category: Category,
+        entities: List<com.layerbit.deja.data.model.Extracted>
+    ): String = buildString {
+        append(text)
+        if (app.isNotEmpty()) {
+            append(' ')
+            append(app)
+        }
+        append(' ')
+        append(category.label)
+        val values = ExtractedCodec.searchableValues(entities)
+        if (values.isNotEmpty()) {
+            append(' ')
+            append(values)
         }
     }
 
@@ -89,6 +135,20 @@ class IndexWorker(
                 ExistingWorkPolicy.KEEP,
                 OneTimeWorkRequestBuilder<IndexWorker>().build()
             )
+        }
+
+        /** Replaces any running scan - used when the user explicitly asks to start over. */
+        fun restart(context: Context) {
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                UNIQUE_NAME,
+                ExistingWorkPolicy.REPLACE,
+                OneTimeWorkRequestBuilder<IndexWorker>().build()
+            )
+        }
+
+        fun stop(context: Context) {
+            WorkManager.getInstance(context).cancelUniqueWork(UNIQUE_NAME)
+            IndexingState.stopped()
         }
     }
 }

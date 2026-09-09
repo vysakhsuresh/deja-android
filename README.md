@@ -43,12 +43,29 @@ Two consequences that shape the code:
 
 | | |
 |---|---|
-| Indexing | Scans the Screenshots bucket via MediaStore, OCRs anything new, drops rows for screenshots deleted elsewhere. Runs in WorkManager so it survives the app closing. |
-| Timeline | Screenshots grouped by day, filterable by category, with live indexing progress. |
-| Search | Full-text search over the OCR'd text, ranked by how many of your terms actually hit. |
-| Detail | The screenshot, what Deja pulled out of it (codes, amounts, booking refs, Wi-Fi passwords, dates, links), one tap to copy, and the raw text it read. |
-| Clean up | Groups of screenshots that are safe to remove, with live totals. Deletion goes through `MediaStore.createTrashRequest`, so items land in the system trash and stay recoverable, and the user confirms in a dialog Deja cannot bypass. |
-| Privacy | The permission story, what is indexed, and a way to wipe the index or force a re-read. |
+| Indexing | Scans the Screenshots bucket via MediaStore, OCRs anything new, drops rows for screenshots deleted elsewhere. Runs in WorkManager so it survives the app closing, and can be stopped and resumed. |
+| Timeline | Screenshots grouped by day, filterable by category **and by the app they came from**, with live scan progress and a stop control. |
+| Search | Full-text search over the OCR'd text, the app name, the category and the non-sensitive extracted values — ranked by how many of your terms actually hit. |
+| Detail | The screenshot, what Deja pulled out of it, one tap to copy, share and open. ID and card numbers are masked until tapped. |
+| Clean up | Six groups of screenshots that are safe to remove, with live totals, select-all, and a re-scan. Deletion goes through `MediaStore.createTrashRequest`, so items land in the system trash and stay recoverable, and the user confirms in a dialog Deja cannot bypass. |
+| Privacy | The permission story, what is indexed, and guarded controls to stop a scan, re-read, or wipe the index. |
+| About | What the library looks like in aggregate, plus support and feedback links. |
+
+### Categorisation
+
+Three signals, weighted rather than chained (`Classifier.kt`):
+
+1. **The app the screenshot came from**, read off the filename — `Screenshot_..._WhatsApp.jpg` on
+   Samsung and OnePlus, `..._com.whatsapp.jpg` on Xiaomi and Realme. The strongest signal
+   available offline and free to obtain. Pixel and stock builds write no app name, so it can never
+   decide alone.
+2. **What was extracted** — a PAN number means an ID document regardless of what else the OCR
+   picked up; a PNR means travel.
+3. **Words in the text**, split into strong terms that mean one thing and ordinary ones that only
+   count alongside others.
+
+The first version demanded two keyword hits and dropped everything else into "Everything else",
+which is where most of a real library ended up. Scoring is what fixes that.
 
 ### What is deliberately not built yet
 
@@ -58,11 +75,19 @@ Two consequences that shape the code:
   your screenshots" rather than "Ask anything" for that reason.
 - **Ask Deja and Collections** from the design are not implemented. Ask needs an on-device
   language model and is the intended paid tier.
-- **Categories come from a keyword scorer**, not a model — see `Classifier.kt`. It is fast and
-  explainable, and it is wrong sometimes, which is why nothing destructive keys off the category
-  alone.
-- **The fonts are the system face.** The design pairs Bricolage Grotesque with Instrument Sans;
-  dropping those into `res/font` and pointing `Theme.kt` at them is the only change needed.
+- **Names of people are not extracted.** Phone numbers, emails and handles are, and they are what
+  drives the People & contacts bucket; picking human names out of arbitrary OCR text needs a model
+  that would have to be downloaded.
+- **Sensitive values are stored in the index in the clear** but kept out of the search blob and
+  masked in the UI until tapped. The database is app-private and Deja has no network, so the
+  threat being addressed is a glance over your shoulder, not exfiltration.
+
+### Upgrading from an earlier build
+
+The schema changed (source app, search blob), and the database is set to
+`fallbackToDestructiveMigration`. **The existing index is dropped on first launch and every
+screenshot is read again.** That is deliberate — the index is derived data that can always be
+rebuilt from the screenshots themselves, so it is cheaper than shipping migrations for it.
 
 ## Project layout
 

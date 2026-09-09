@@ -1,13 +1,18 @@
 package com.layerbit.deja.ui.theme
 
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.layerbit.deja.R
 
 /**
  * The palette from the design canvas. Warm charcoal rather than the blue-black LayerLink uses -
@@ -28,20 +33,26 @@ object DejaColors {
     val OnAmber = Color(0xFF16120C)
     val Green = Color(0xFF58C08C)
     val GreenDim = Color(0xFF16301F)
+    val Danger = Color(0xFFE0705F)
 }
 
-// The canvas pairs Bricolage Grotesque with Instrument Sans. Neither ships here yet, so this is
-// the system face at the same weights and sizes; dropping the real fonts into res/font later is
-// the only change needed.
+/** Space Grotesk, the same face LayerLink and layerbit.co.in use. */
+val SpaceGrotesk = FontFamily(
+    Font(R.font.space_grotesk_regular, FontWeight.Normal),
+    Font(R.font.space_grotesk_medium, FontWeight.Medium),
+    Font(R.font.space_grotesk_semibold, FontWeight.SemiBold),
+    Font(R.font.space_grotesk_bold, FontWeight.Bold)
+)
+
 private val DejaTypography = Typography(
-    displayLarge = TextStyle(fontSize = 50.sp, fontWeight = FontWeight.Bold, letterSpacing = (-2).sp),
-    displayMedium = TextStyle(fontSize = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.5).sp),
-    titleLarge = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.7).sp),
-    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Normal),
-    bodyMedium = TextStyle(fontSize = 13.5.sp, fontWeight = FontWeight.Normal),
-    bodySmall = TextStyle(fontSize = 12.5.sp, fontWeight = FontWeight.Normal),
-    labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium)
+    displayLarge = TextStyle(fontFamily = SpaceGrotesk, fontSize = 46.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.8).sp),
+    displayMedium = TextStyle(fontFamily = SpaceGrotesk, fontSize = 38.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.4).sp),
+    titleLarge = TextStyle(fontFamily = SpaceGrotesk, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.6).sp),
+    titleMedium = TextStyle(fontFamily = SpaceGrotesk, fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+    bodyLarge = TextStyle(fontFamily = SpaceGrotesk, fontSize = 15.sp, fontWeight = FontWeight.Normal),
+    bodyMedium = TextStyle(fontFamily = SpaceGrotesk, fontSize = 13.5.sp, fontWeight = FontWeight.Normal),
+    bodySmall = TextStyle(fontFamily = SpaceGrotesk, fontSize = 12.5.sp, fontWeight = FontWeight.Normal),
+    labelSmall = TextStyle(fontFamily = SpaceGrotesk, fontSize = 11.sp, fontWeight = FontWeight.Medium)
 )
 
 private val DejaColorScheme = darkColorScheme(
@@ -58,7 +69,17 @@ private val DejaColorScheme = darkColorScheme(
 fun DejaTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = DejaColorScheme,
-        typography = DejaTypography,
-        content = content
-    )
+        typography = DejaTypography
+    ) {
+        // Most screens style text inline, which merges with whatever LocalTextStyle carries -
+        // setting the family here is what makes Space Grotesk the default everywhere rather than
+        // something each call site has to remember.
+        CompositionLocalProvider(
+            LocalTextStyle provides LocalTextStyle.current.copy(
+                fontFamily = SpaceGrotesk,
+                color = DejaColors.Text
+            ),
+            content = content
+        )
+    }
 }

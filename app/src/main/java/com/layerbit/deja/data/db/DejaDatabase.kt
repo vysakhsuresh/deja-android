@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [ShotEntity::class, ShotFts::class],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class DejaDatabase : RoomDatabase() {

@@ -2,7 +2,6 @@ package com.layerbit.deja.ui.privacy
 
 import android.app.Application
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,6 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,10 +38,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.DejaApplication
 import com.layerbit.deja.data.index.IndexWorker
+import com.layerbit.deja.data.index.IndexingState
+import com.layerbit.deja.ui.components.ActionRow
 import com.layerbit.deja.ui.components.DejaBottomBar
+import com.layerbit.deja.ui.components.DejaDialog
 import com.layerbit.deja.ui.components.ScreenHeader
+import com.layerbit.deja.ui.components.SectionLabel
 import com.layerbit.deja.ui.components.Tab
-import com.layerbit.deja.ui.components.TapTarget
 import com.layerbit.deja.ui.theme.DejaColors
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -53,20 +57,71 @@ class PrivacyViewModel(app: Application) : AndroidViewModel(app) {
     val indexedCount = repository.observeCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
+    val indexing = IndexingState.progress
+
     fun clearIndex() {
         viewModelScope.launch { repository.clearIndex() }
     }
 }
 
+/** Which destructive action the user asked for while a scan was still running. */
+private enum class Pending { NONE, RESCAN, CLEAR }
+
 @Composable
 fun PrivacyScreen(
     onBack: () -> Unit,
-    onOpenTimeline: () -> Unit,
-    onOpenCleanup: () -> Unit,
+    onSelectTab: (Tab) -> Unit,
     viewModel: PrivacyViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val indexed by viewModel.indexedCount.collectAsState()
+    val indexing by viewModel.indexing.collectAsState()
+    var pending by remember { mutableStateOf(Pending.NONE) }
+    var confirmClear by remember { mutableStateOf(false) }
+
+    // Re-reading or wiping the index while a scan is mid-flight leaves the two halves disagreeing
+    // about what has been read. Rather than quietly blocking it, say what is going on and let the
+    // user decide - they may well have a reason.
+    if (pending != Pending.NONE) {
+        DejaDialog(
+            title = "A scan is running",
+            message = "Deja has read ${indexing.done} of ${indexing.total} screenshots. " +
+                if (pending == Pending.RESCAN) {
+                    "Starting over throws that progress away and reads everything again."
+                } else {
+                    "Clearing the index now stops the scan and forgets what it has read so far."
+                },
+            confirmLabel = if (pending == Pending.RESCAN) "Start over" else "Clear anyway",
+            destructive = true,
+            onConfirm = {
+                val action = pending
+                pending = Pending.NONE
+                if (action == Pending.RESCAN) {
+                    IndexWorker.restart(context)
+                } else {
+                    IndexWorker.stop(context)
+                    confirmClear = true
+                }
+            },
+            onDismiss = { pending = Pending.NONE }
+        )
+    }
+
+    if (confirmClear) {
+        DejaDialog(
+            title = "Forget everything Deja read?",
+            message = "This clears the index of $indexed screenshots. The screenshots themselves " +
+                "stay exactly where they are — Deja would just have to read them again.",
+            confirmLabel = "Forget it all",
+            destructive = true,
+            onConfirm = {
+                confirmClear = false
+                viewModel.clearIndex()
+                IndexingState.reset()
+            },
+            onDismiss = { confirmClear = false }
+        )
+    }
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(title = "Privacy", onBack = onBack)
@@ -113,29 +168,50 @@ fun PrivacyScreen(
             Claim("Every model runs on this device")
             Claim("No account, no sign-in, no cloud backup")
             Claim("No analytics and no crash reporting")
+            Claim("ID and card numbers stay masked until tapped")
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
+            SectionLabel("The index")
+            Spacer(Modifier.height(10.dp))
 
-            InfoCard(
-                title = "What Deja can read",
-                subtitle = "Your Screenshots folder only"
-            )
+            InfoCard(title = "What Deja can read", subtitle = "Your Screenshots folder only")
             Spacer(Modifier.height(10.dp))
             InfoCard(
                 title = "Indexed on this device",
-                subtitle = if (indexed == 1) "1 screenshot" else "$indexed screenshots"
+                subtitle = when {
+                    indexing.running -> "${indexing.done} of ${indexing.total} · still reading"
+                    indexed == 1 -> "1 screenshot"
+                    else -> "$indexed screenshots"
+                }
             )
+
             Spacer(Modifier.height(10.dp))
-            ActionCard(
+
+            if (indexing.running) {
+                ActionRow(
+                    title = "Stop the scan",
+                    subtitle = "Keeps everything read so far. You can resume later.",
+                    onClick = { IndexWorker.stop(context) }
+                )
+                Spacer(Modifier.height(10.dp))
+            }
+
+            ActionRow(
                 title = "Re-read everything",
                 subtitle = "Scan for screenshots taken or removed since last time",
-                onClick = { IndexWorker.enqueue(context) }
+                onClick = {
+                    if (indexing.running) pending = Pending.RESCAN
+                    else IndexWorker.restart(context)
+                }
             )
             Spacer(Modifier.height(10.dp))
-            ActionCard(
+            ActionRow(
                 title = "Delete everything Deja knows",
                 subtitle = "Clears the index. Your screenshots themselves stay put.",
-                onClick = viewModel::clearIndex
+                tint = DejaColors.Danger,
+                onClick = {
+                    if (indexing.running) pending = Pending.CLEAR else confirmClear = true
+                }
             )
 
             Spacer(Modifier.height(20.dp))
@@ -151,13 +227,7 @@ fun PrivacyScreen(
             Spacer(Modifier.height(28.dp))
         }
 
-        DejaBottomBar(current = Tab.PRIVACY) { tab ->
-            when (tab) {
-                Tab.TIMELINE -> onOpenTimeline()
-                Tab.CLEAN -> onOpenCleanup()
-                Tab.PRIVACY -> Unit
-            }
-        }
+        DejaBottomBar(current = Tab.PRIVACY, onSelect = onSelectTab)
     }
 }
 
@@ -166,7 +236,7 @@ private fun Claim(text: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(46.dp),
+            .height(44.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -192,22 +262,5 @@ private fun InfoCard(title: String, subtitle: String) {
     ) {
         Text(text = title, color = DejaColors.Text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         Text(text = subtitle, color = DejaColors.Dim, fontSize = 12.5.sp)
-    }
-}
-
-@Composable
-private fun ActionCard(title: String, subtitle: String, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = TapTarget)
-            .clip(RoundedCornerShape(15.dp))
-            .background(DejaColors.SurfaceDim)
-            .clickable(onClick = onClick)
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(3.dp)
-    ) {
-        Text(text = title, color = DejaColors.Amber, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-        Text(text = subtitle, color = DejaColors.Dim, fontSize = 12.5.sp, lineHeight = 17.sp)
     }
 }

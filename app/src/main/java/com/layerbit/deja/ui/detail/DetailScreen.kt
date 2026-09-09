@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -79,6 +80,8 @@ fun DetailScreen(
     val context = LocalContext.current
     val shot by viewModel.shot.collectAsState()
     var copied by remember { mutableStateOf<String?>(null) }
+    var revealed by remember { mutableStateOf(setOf<String>()) }
+    var showText by remember { mutableStateOf(false) }
 
     LaunchedEffect(shotId) { viewModel.load(shotId) }
 
@@ -92,6 +95,7 @@ fun DetailScreen(
         }
 
         val entities = remember(current.entitiesJson) { ExtractedCodec.decode(current.entitiesJson) }
+        val uri = remember(current.uri) { Uri.parse(current.uri) }
 
         Column(
             modifier = Modifier
@@ -101,7 +105,7 @@ fun DetailScreen(
                 .padding(horizontal = 20.dp)
         ) {
             ShotThumbnail(
-                uri = Uri.parse(current.uri),
+                uri = uri,
                 size = 1024,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
@@ -109,6 +113,17 @@ fun DetailScreen(
                     .height(340.dp)
                     .clip(RoundedCornerShape(16.dp))
             )
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SecondaryButton(label = "Share", modifier = Modifier.weight(1f)) {
+                    context.shareImage(uri)
+                }
+                SecondaryButton(label = "Open", modifier = Modifier.weight(1f)) {
+                    context.viewImage(uri)
+                }
+            }
 
             Spacer(Modifier.height(20.dp))
 
@@ -133,15 +148,28 @@ fun DetailScreen(
                         .background(DejaColors.Surface),
                     verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
-                    entities.forEach { item ->
+                    entities.forEachIndexed { index, item ->
+                        val key = "$index:${item.type.id}"
                         EntityRow(
                             item = item,
+                            revealed = key in revealed,
+                            onReveal = { revealed = revealed + key },
                             onCopy = {
                                 context.copyToClipboard(item.type.label, item.value)
                                 copied = item.value
                             }
                         )
                     }
+                }
+                if (entities.any { it.type.sensitive }) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "ID and card numbers stay hidden until you tap them. Deja can't " +
+                            "send them anywhere, but a glance over your shoulder is still a thing.",
+                        color = DejaColors.Dim,
+                        fontSize = 11.5.sp,
+                        lineHeight = 16.sp
+                    )
                 }
             }
 
@@ -153,30 +181,36 @@ fun DetailScreen(
             Spacer(Modifier.height(20.dp))
 
             Text(
-                text = listOf(
-                    Category.fromId(current.category).label,
-                    current.dateTakenMillis.asReadableDate(),
-                    formatBytes(current.sizeBytes)
-                ).joinToString("  ·  "),
+                text = buildList {
+                    add(Category.fromId(current.category).label)
+                    if (current.sourceApp.isNotEmpty()) add(current.sourceApp)
+                    add(current.dateTakenMillis.asReadableDate())
+                    add(formatBytes(current.sizeBytes))
+                }.joinToString("  ·  "),
                 color = DejaColors.Dim,
                 fontSize = 12.sp
             )
 
             if (current.text.isNotBlank()) {
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(18.dp))
                 Text(
-                    text = "Text Deja read",
-                    color = DejaColors.Text,
+                    text = if (showText) "Hide the text Deja read" else "Show the text Deja read",
+                    color = DejaColors.Amber,
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { showText = !showText }
+                        .padding(vertical = 12.dp)
                 )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = current.text,
-                    color = DejaColors.Muted,
-                    fontSize = 13.sp,
-                    lineHeight = 20.sp
-                )
+                if (showText) {
+                    Text(
+                        text = current.text,
+                        color = DejaColors.Muted,
+                        fontSize = 13.sp,
+                        lineHeight = 20.sp
+                    )
+                }
             }
 
             Spacer(Modifier.height(32.dp))
@@ -185,12 +219,32 @@ fun DetailScreen(
 }
 
 @Composable
-private fun EntityRow(item: Extracted, onCopy: () -> Unit) {
+private fun SecondaryButton(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Box(
+        modifier = modifier
+            .height(TapTarget)
+            .clip(RoundedCornerShape(13.dp))
+            .background(DejaColors.Surface)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = label, color = DejaColors.Text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun EntityRow(
+    item: Extracted,
+    revealed: Boolean,
+    onReveal: () -> Unit,
+    onCopy: () -> Unit
+) {
+    val hidden = item.type.sensitive && !revealed
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(TapTarget + 8.dp)
-            .clickable(onClick = onCopy)
+            .clickable { if (hidden) onReveal() else onCopy() }
             .padding(horizontal = 15.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -198,10 +252,10 @@ private fun EntityRow(item: Extracted, onCopy: () -> Unit) {
             text = item.type.label,
             color = DejaColors.Dim,
             fontSize = 13.sp,
-            modifier = Modifier.width(96.dp)
+            modifier = Modifier.width(104.dp)
         )
         Text(
-            text = item.value,
+            text = if (hidden) item.masked() else item.value,
             color = DejaColors.Text,
             fontSize = 13.5.sp,
             fontWeight = FontWeight.Medium,
@@ -210,7 +264,7 @@ private fun EntityRow(item: Extracted, onCopy: () -> Unit) {
         )
         Spacer(Modifier.width(10.dp))
         Text(
-            text = "Copy",
+            text = if (hidden) "Reveal" else "Copy",
             color = DejaColors.Amber,
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold
@@ -221,6 +275,27 @@ private fun EntityRow(item: Extracted, onCopy: () -> Unit) {
 private fun Context.copyToClipboard(label: String, value: String) {
     val clipboard = getSystemService(ClipboardManager::class.java) ?: return
     clipboard.setPrimaryClip(ClipData.newPlainText(label, value))
+}
+
+/**
+ * Handing the image to another app is a share sheet, not a network call - Deja has no socket to
+ * send it down, and whatever the user picks does the sending under its own permissions.
+ */
+private fun Context.shareImage(uri: Uri) {
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "image/*"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    startActivity(Intent.createChooser(intent, "Share screenshot"))
+}
+
+private fun Context.viewImage(uri: Uri) {
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, "image/*")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    runCatching { startActivity(intent) }
 }
 
 private val readableDate = DateTimeFormatter.ofPattern("d MMM yyyy")

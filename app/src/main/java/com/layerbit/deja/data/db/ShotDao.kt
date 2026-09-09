@@ -8,6 +8,16 @@ import kotlinx.coroutines.flow.Flow
 
 data class CategoryCount(val category: String, val count: Int)
 
+data class AppCount(val sourceApp: String, val count: Int)
+
+data class LibraryStats(
+    val total: Int,
+    val totalBytes: Long,
+    val oldestMillis: Long,
+    val newestMillis: Long,
+    val withText: Int
+)
+
 @Dao
 interface ShotDao {
 
@@ -20,14 +30,40 @@ interface ShotDao {
     @Query("SELECT COUNT(*) FROM shots")
     fun observeCount(): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM shots")
+    suspend fun count(): Int
+
     @Query("SELECT * FROM shots ORDER BY dateTakenMillis DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<ShotEntity>>
 
     @Query("SELECT * FROM shots WHERE category = :category ORDER BY dateTakenMillis DESC LIMIT :limit")
     fun observeByCategory(category: String, limit: Int): Flow<List<ShotEntity>>
 
+    @Query("SELECT * FROM shots WHERE sourceApp = :app ORDER BY dateTakenMillis DESC LIMIT :limit")
+    fun observeByApp(app: String, limit: Int): Flow<List<ShotEntity>>
+
     @Query("SELECT category, COUNT(*) AS count FROM shots GROUP BY category")
     fun observeCategoryCounts(): Flow<List<CategoryCount>>
+
+    @Query(
+        """
+        SELECT sourceApp, COUNT(*) AS count FROM shots
+        WHERE sourceApp <> '' GROUP BY sourceApp ORDER BY count DESC LIMIT :limit
+        """
+    )
+    fun observeAppCounts(limit: Int): Flow<List<AppCount>>
+
+    @Query(
+        """
+        SELECT COUNT(*) AS total,
+               COALESCE(SUM(sizeBytes), 0) AS totalBytes,
+               COALESCE(MIN(dateTakenMillis), 0) AS oldestMillis,
+               COALESCE(MAX(dateTakenMillis), 0) AS newestMillis,
+               COALESCE(SUM(CASE WHEN length(text) >= 12 THEN 1 ELSE 0 END), 0) AS withText
+        FROM shots
+        """
+    )
+    fun observeStats(): Flow<LibraryStats>
 
     @Query("SELECT * FROM shots WHERE id = :id")
     suspend fun byId(id: Long): ShotEntity?
@@ -50,8 +86,19 @@ interface ShotDao {
     @Query("SELECT * FROM shots WHERE category = :category AND dateTakenMillis < :before ORDER BY dateTakenMillis DESC")
     suspend fun olderThanInCategory(category: String, before: Long): List<ShotEntity>
 
-    @Query("SELECT * FROM shots WHERE category IN ('other', 'chat') AND dateTakenMillis < :before ORDER BY dateTakenMillis DESC")
-    suspend fun oldUncategorised(before: Long): List<ShotEntity>
+    @Query(
+        """
+        SELECT * FROM shots WHERE category IN (:categories) AND dateTakenMillis < :before
+        ORDER BY dateTakenMillis DESC
+        """
+    )
+    suspend fun olderThanInCategories(categories: List<String>, before: Long): List<ShotEntity>
+
+    @Query("SELECT * FROM shots WHERE dateTakenMillis < :before ORDER BY dateTakenMillis DESC")
+    suspend fun olderThan(before: Long): List<ShotEntity>
+
+    @Query("SELECT * FROM shots WHERE sizeBytes >= :minBytes ORDER BY sizeBytes DESC")
+    suspend fun largerThan(minBytes: Long): List<ShotEntity>
 
     @Query("SELECT * FROM shots WHERE length(text) < :minChars ORDER BY dateTakenMillis DESC")
     suspend fun withLittleText(minChars: Int): List<ShotEntity>

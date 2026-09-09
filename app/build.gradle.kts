@@ -65,6 +65,8 @@ android {
 
     buildFeatures {
         compose = true
+        // The About screen shows the version it is actually running.
+        buildConfig = true
     }
 
     packaging {

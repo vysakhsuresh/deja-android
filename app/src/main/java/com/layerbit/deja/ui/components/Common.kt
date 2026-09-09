@@ -14,17 +14,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -80,7 +85,8 @@ fun ScreenHeader(
 enum class Tab(val label: String, val icon: ImageVector) {
     TIMELINE("Timeline", Icons.Filled.Menu),
     CLEAN("Clean", Icons.Filled.Delete),
-    PRIVACY("Privacy", Icons.Filled.Lock)
+    PRIVACY("Privacy", Icons.Filled.Lock),
+    ABOUT("About", Icons.Filled.Info)
 }
 
 @Composable
@@ -146,6 +152,95 @@ fun SettingsButton(onClick: () -> Unit) {
             tint = DejaColors.Muted,
             modifier = Modifier.size(22.dp)
         )
+    }
+}
+
+@Composable
+fun DejaDialog(
+    title: String,
+    message: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    dismissLabel: String = "Cancel",
+    destructive: Boolean = false,
+    secondaryLabel: String? = null,
+    onSecondary: (() -> Unit)? = null
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DejaColors.Surface,
+        titleContentColor = DejaColors.Text,
+        textContentColor = DejaColors.Muted,
+        title = { Text(text = title, fontSize = 18.sp, fontWeight = FontWeight.Bold) },
+        text = { Text(text = message, fontSize = 14.sp, lineHeight = 21.sp) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = confirmLabel,
+                    color = if (destructive) DejaColors.Danger else DejaColors.Amber,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        dismissButton = {
+            Row {
+                if (secondaryLabel != null && onSecondary != null) {
+                    TextButton(onClick = onSecondary) {
+                        Text(text = secondaryLabel, color = DejaColors.Amber)
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(text = dismissLabel, color = DejaColors.Muted)
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text.uppercase(),
+        color = DejaColors.Dim,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = 1.sp,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun ActionRow(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    tint: androidx.compose.ui.graphics.Color = DejaColors.Amber,
+    trailing: String? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(15.dp))
+            .background(DejaColors.SurfaceDim)
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(text = title, color = tint, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = subtitle,
+                color = DejaColors.Dim,
+                fontSize = 12.5.sp,
+                lineHeight = 17.sp
+            )
+        }
+        if (trailing != null) {
+            Spacer(Modifier.width(10.dp))
+            Text(text = trailing, color = DejaColors.Muted, fontSize = 13.sp)
+        }
     }
 }
 
