@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#0E0D0C</color>
+    <!-- Sampled from the source logo. Slightly lifted from the app's own #0E0D0C so the icon
+         still has an edge against a dark wallpaper. -->
+    <color name="ic_launcher_background">#1D1918</color>
 </resources>

@@ -87,6 +87,10 @@ app/src/main/java/com/layerbit/deja/
 Screen designs and a clickable prototype live in the `deja-design/` folder of the
 `layerlink-android` repository.
 
+`store-assets/` holds the source logo and a 512×512 listing icon. The launcher icon itself is a
+vector traced from that logo (`ic_launcher_foreground.xml`) rather than an exported bitmap, so it
+stays sharp at every density and can supply the themed-icon layer.
+
 ## Requirements
 
 - Android Studio with an SDK for **compileSdk 36**

@@ -1,19 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Deja mark: one frame, and a second one showing from behind it to the right - the thing you
+  already saw, seen again. Geometry traced from the source logo, so the proportions here are
+  measured rather than approximated: both frames carry a thicker bottom bar than top, which is
+  what stops them reading as plain rectangles.
+
+  Drawn in three passes. The cream frame goes down first, then a solid background-coloured shape
+  in the amber frame's outline hides the part of it that sits behind, then the amber frame goes
+  on top. That middle pass is what makes the overlap read as depth; without it the cream frame
+  shows through the amber window.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
+    <!-- Back frame -->
     <path
-        android:pathData="M40,30 H52 A10,10 0 0 1 62,40 V52 A10,10 0 0 1 52,62 H40 A10,10 0 0 1 30,52 V40 A10,10 0 0 1 40,30 Z"
-        android:strokeColor="#E8A33D"
-        android:strokeWidth="5"
-        android:strokeAlpha="0.42" />
+        android:fillColor="#F5ECE5"
+        android:fillType="evenOdd"
+        android:pathData="M53.6,39.2 H72.6 A4.8,4.8 0 0 1 77.4,44 V72.5 A4.8,4.8 0 0 1 72.6,77.3 H53.6 A4.8,4.8 0 0 1 48.8,72.5 V44 A4.8,4.8 0 0 1 53.6,39.2 Z M54.9,42.5 H71.3 A2.7,2.7 0 0 1 74,45.2 V68.1 A2.7,2.7 0 0 1 71.3,70.8 H54.9 A2.7,2.7 0 0 1 52.2,68.1 V45.2 A2.7,2.7 0 0 1 54.9,42.5 Z" />
 
+    <!-- Occluder: the front frame's silhouette, in the icon background colour -->
     <path
-        android:pathData="M56,46 H68 A10,10 0 0 1 78,56 V68 A10,10 0 0 1 68,78 H56 A10,10 0 0 1 46,68 V56 A10,10 0 0 1 56,46 Z"
-        android:fillColor="#0E0D0C"
-        android:strokeColor="#E8A33D"
-        android:strokeWidth="5" />
+        android:fillColor="@color/ic_launcher_background"
+        android:pathData="M36.5,30.6 H59.6 A5.9,5.9 0 0 1 65.5,36.5 V71.3 A5.9,5.9 0 0 1 59.6,77.2 H36.5 A5.9,5.9 0 0 1 30.6,71.3 V36.5 A5.9,5.9 0 0 1 36.5,30.6 Z" />
+
+    <!-- Front frame -->
+    <path
+        android:fillColor="#E39C34"
+        android:fillType="evenOdd"
+        android:pathData="M36.5,30.6 H59.6 A5.9,5.9 0 0 1 65.5,36.5 V71.3 A5.9,5.9 0 0 1 59.6,77.2 H36.5 A5.9,5.9 0 0 1 30.6,71.3 V36.5 A5.9,5.9 0 0 1 36.5,30.6 Z M37.9,34.7 H58.1 A3.2,3.2 0 0 1 61.3,37.9 V66.1 A3.2,3.2 0 0 1 58.1,69.3 H37.9 A3.2,3.2 0 0 1 34.7,66.1 V37.9 A3.2,3.2 0 0 1 37.9,34.7 Z" />
 </vector>
