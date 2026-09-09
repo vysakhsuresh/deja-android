@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      Deja never declares INTERNET, and that is the product, not a detail.
+
+      Every claim the app makes about privacy reduces to this file: with no INTERNET
+      permission the process cannot open a socket, so screenshots and the text read out of
+      them cannot leave the device even if some dependency tried. Anyone can verify it on
+      the Play Store listing without trusting a policy document.
+
+      Libraries declare permissions of their own and the manifest merger unions them in, so
+      the two entries below strip network access back out no matter what any current or
+      future dependency asks for. Removing them is deliberate: never "fix" a merger conflict
+      by dropping these lines. Check the result in
+      app/build/outputs/logs/manifest-merger-*-report.txt after a build.
+
+      WAKE_LOCK is kept: WorkManager needs it to finish an indexing batch, and it grants no
+      access to anything outside this device.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <application
+        android:name=".DejaApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Deja">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Deja">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>
