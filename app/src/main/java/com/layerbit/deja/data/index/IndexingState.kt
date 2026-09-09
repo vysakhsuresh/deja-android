@@ -50,6 +50,11 @@ object IndexingState {
         _progress.value = current.copy(phase = ScanPhase.FINISHED, done = current.total)
     }
 
+    /** Nothing needed reading. Skips the reading phase entirely so no progress UI ever appears. */
+    fun upToDate(total: Int) {
+        _progress.value = IndexProgress(ScanPhase.FINISHED, total, total)
+    }
+
     fun stopped() {
         _progress.value = _progress.value.copy(phase = ScanPhase.STOPPED)
     }

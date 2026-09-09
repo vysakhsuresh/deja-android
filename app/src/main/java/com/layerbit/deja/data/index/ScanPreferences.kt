@@ -1,9 +1,11 @@
 package com.layerbit.deja.data.index
 
 import android.content.Context
+import com.layerbit.deja.data.scan.MediaGeneration
 
 /**
- * Remembers whether the last scan actually finished.
+ * The little bit of state that decides whether Deja needs to scan at all, and what to do about a
+ * scan that never finished.
  *
  * A scan can be interrupted by the user stopping it, by the process dying, or by the system
  * reclaiming the worker. In every one of those cases the index is real but partial, and the right
@@ -24,6 +26,20 @@ class ScanPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_RESUME_ASKED, false)
         set(value) = prefs.edit().putBoolean(KEY_RESUME_ASKED, value).apply()
 
+    /**
+     * The MediaStore version as of the last completed scan. When it still matches, nothing on the
+     * device has changed and there is nothing to do.
+     */
+    var lastGeneration: Long
+        get() = prefs.getLong(KEY_GENERATION, MediaGeneration.UNKNOWN)
+        set(value) = prefs.edit().putLong(KEY_GENERATION, value).apply()
+
+    /** True when the library is known to be unchanged since the last completed scan. */
+    fun isUpToDate(current: Long): Boolean =
+        !interrupted &&
+            current != MediaGeneration.UNKNOWN &&
+            current == lastGeneration
+
     fun markStarted() {
         prefs.edit()
             .putBoolean(KEY_INTERRUPTED, true)
@@ -31,15 +47,22 @@ class ScanPreferences(context: Context) {
             .apply()
     }
 
-    fun markFinished() {
+    fun markFinished(generation: Long) {
         prefs.edit()
             .putBoolean(KEY_INTERRUPTED, false)
             .putBoolean(KEY_RESUME_ASKED, false)
+            .putLong(KEY_GENERATION, generation)
             .apply()
+    }
+
+    /** Forces the next launch to scan, whatever MediaStore says. */
+    fun forgetGeneration() {
+        prefs.edit().putLong(KEY_GENERATION, MediaGeneration.UNKNOWN).apply()
     }
 
     private companion object {
         const val KEY_INTERRUPTED = "interrupted"
         const val KEY_RESUME_ASKED = "resume_asked"
+        const val KEY_GENERATION = "last_generation"
     }
 }

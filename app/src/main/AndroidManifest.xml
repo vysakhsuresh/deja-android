@@ -23,6 +23,12 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!--
+      Android 14+ lets someone grant access to a hand-picked set of images instead of all of them.
+      Declaring this is what turns that into a state Deja supports properly - it indexes whatever
+      was picked and offers a way to pick more - rather than an app that silently looks broken.
+    -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />

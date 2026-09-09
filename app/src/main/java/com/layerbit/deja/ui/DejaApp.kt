@@ -1,11 +1,13 @@
 package com.layerbit.deja.ui
 
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -14,6 +16,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -22,6 +27,7 @@ import androidx.navigation.navArgument
 import com.layerbit.deja.DejaApplication
 import com.layerbit.deja.data.index.IndexWorker
 import com.layerbit.deja.data.index.ScanPreferences
+import com.layerbit.deja.data.scan.MediaGeneration
 import com.layerbit.deja.ui.about.AboutScreen
 import com.layerbit.deja.ui.cleanup.CleanupScreen
 import com.layerbit.deja.ui.components.DejaDialog
@@ -48,33 +54,64 @@ object Routes {
 @Composable
 fun DejaApp() {
     val context = LocalContext.current
-    var granted by remember { mutableStateOf(MediaPermission.isGranted(context)) }
+    val activity = context as? Activity
+    var access by remember { mutableStateOf(MediaPermission.access(context)) }
+
+    // Permission can change outside the app - in Settings, or in the Android 14 photo picker - so
+    // the state is re-read every time Deja comes back to the foreground. Without this, granting
+    // access in Settings leaves the app still showing its locked screen until it is force-closed.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) access = MediaPermission.access(context)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { result -> granted = result }
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        MediaPermission.rememberAsked(context)
+        access = MediaPermission.access(context)
+        // A fresh selection in the Android 14 picker changes what Deja can see, so the next scan
+        // has to actually look rather than trust the version counter.
+        ScanPreferences(context).forgetGeneration()
+    }
+
+    val requestAccess = { permissionLauncher.launch(MediaPermission.requested) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(DejaColors.Background)
     ) {
-        if (!granted) {
-            OnboardingScreen(onGrant = { permissionLauncher.launch(MediaPermission.name) })
+        if (access == MediaAccess.NONE) {
+            OnboardingScreen(
+                canAskAgain = activity?.let { MediaPermission.canAskAgain(it) } ?: true,
+                onRequest = requestAccess,
+                onOpenSettings = { MediaPermission.openAppSettings(context) }
+            )
         } else {
             ScanGate()
-            DejaNavHost()
+            DejaNavHost(
+                partialAccess = access == MediaAccess.PARTIAL,
+                onRequestMoreAccess = requestAccess
+            )
         }
     }
 }
 
 /**
- * Decides what to do about a scan that never finished.
+ * Decides whether to scan at all, and what to do about a scan that never finished.
  *
- * A partial index is not wrong, just incomplete, and the two reasonable responses - carry on from
- * where it stopped, or throw it away and read everything again - differ enough that guessing on
- * the user's behalf is the one thing not to do. When nothing was interrupted this starts a normal
- * scan and shows nothing at all.
+ * The common case is that nothing has changed since last time, and the right amount of work then
+ * is none: MediaStore's version counter answers that for free, so reopening the app on a library
+ * that is already read does nothing and shows nothing.
+ *
+ * When a scan was interrupted, the two reasonable responses - carry on from where it stopped, or
+ * throw it away and read everything again - differ enough that guessing on the user's behalf is
+ * the one thing not to do.
  */
 @Composable
 private fun ScanGate() {
@@ -86,10 +123,11 @@ private fun ScanGate() {
     var askResume by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        if (prefs.interrupted && !prefs.resumeAsked) {
-            askResume = true
-        } else {
-            IndexWorker.enqueue(context)
+        val generation = MediaGeneration.current(context)
+        when {
+            prefs.interrupted && !prefs.resumeAsked -> askResume = true
+            prefs.isUpToDate(generation) && app.repository.count() > 0 -> Unit
+            else -> IndexWorker.enqueue(context)
         }
     }
 
@@ -126,7 +164,7 @@ private fun ScanGate() {
 }
 
 @Composable
-private fun DejaNavHost() {
+private fun DejaNavHost(partialAccess: Boolean, onRequestMoreAccess: () -> Unit) {
     val navController = rememberNavController()
 
     val goTab: (Tab) -> Unit = { tab ->
@@ -149,7 +187,9 @@ private fun DejaNavHost() {
             TimelineScreen(
                 onOpenSearch = { navController.navigate(Routes.SEARCH) },
                 onOpenShot = { navController.navigate(Routes.detail(it)) },
-                onSelectTab = goTab
+                onSelectTab = goTab,
+                partialAccess = partialAccess,
+                onRequestMoreAccess = onRequestMoreAccess
             )
         }
         composable(Routes.SEARCH) {
@@ -167,7 +207,9 @@ private fun DejaNavHost() {
         composable(Routes.PRIVACY) {
             PrivacyScreen(
                 onBack = { navController.popBackStack() },
-                onSelectTab = goTab
+                onSelectTab = goTab,
+                partialAccess = partialAccess,
+                onRequestMoreAccess = onRequestMoreAccess
             )
         }
         composable(Routes.ABOUT) {

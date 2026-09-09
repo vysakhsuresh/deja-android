@@ -28,8 +28,18 @@ import androidx.compose.ui.unit.sp
 import com.layerbit.deja.ui.components.TapTarget
 import com.layerbit.deja.ui.theme.DejaColors
 
+/**
+ * @param canAskAgain false once Android has stopped showing the system dialog. At that point
+ *   asking again does nothing at all, so the screen has to send the user to Settings instead of
+ *   offering a button that silently fails - which is what made a refused install look permanently
+ *   broken.
+ */
 @Composable
-fun OnboardingScreen(onGrant: () -> Unit) {
+fun OnboardingScreen(
+    canAskAgain: Boolean,
+    onRequest: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -38,7 +48,7 @@ fun OnboardingScreen(onGrant: () -> Unit) {
             .padding(horizontal = 24.dp, vertical = 24.dp)
     ) {
         Text(
-            text = "deja",
+            text = "deja.",
             color = DejaColors.Text,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
@@ -49,7 +59,11 @@ fun OnboardingScreen(onGrant: () -> Unit) {
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "You've already seen it.\nNow you can find it.",
+                text = if (canAskAgain) {
+                    "You've already seen it.\nNow you can find it."
+                } else {
+                    "Deja needs your\nscreenshots folder."
+                },
                 color = DejaColors.Text,
                 fontSize = 30.sp,
                 lineHeight = 38.sp,
@@ -57,9 +71,14 @@ fun OnboardingScreen(onGrant: () -> Unit) {
             )
             Spacer(Modifier.height(18.dp))
             Text(
-                text = "Deja reads your screenshots so you can search them in " +
-                    "words instead of scrolling for them. To do that it needs to " +
-                    "see your Screenshots folder.",
+                text = if (canAskAgain) {
+                    "Deja reads your screenshots so you can search them in words instead of " +
+                        "scrolling for them. To do that it needs to see your Screenshots folder."
+                } else {
+                    "Android won't show the permission prompt again after it has been declined, " +
+                        "so it has to be switched on by hand. Open Settings → Permissions → " +
+                        "Photos and videos, and choose Allow all."
+                },
                 color = DejaColors.Muted,
                 fontSize = 15.sp,
                 lineHeight = 23.sp
@@ -91,21 +110,40 @@ fun OnboardingScreen(onGrant: () -> Unit) {
 
         Spacer(Modifier.height(12.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(TapTarget + 6.dp)
-                .clip(RoundedCornerShape(15.dp))
-                .background(DejaColors.Amber)
-                .clickable(onClick = onGrant),
-            contentAlignment = Alignment.Center
-        ) {
+        PrimaryButton(
+            label = if (canAskAgain) "Choose the screenshots folder" else "Open Deja's settings",
+            onClick = if (canAskAgain) onRequest else onOpenSettings
+        )
+
+        if (!canAskAgain) {
+            Spacer(Modifier.height(10.dp))
             Text(
-                text = "Choose the screenshots folder",
-                color = DejaColors.OnAmber,
-                fontSize = 15.5.sp,
-                fontWeight = FontWeight.SemiBold
+                text = "Already granted it? Come back and Deja will pick it up.",
+                color = DejaColors.Dim,
+                fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
+    }
+}
+
+@Composable
+private fun PrimaryButton(label: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(TapTarget + 6.dp)
+            .clip(RoundedCornerShape(15.dp))
+            .background(DejaColors.Amber)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = DejaColors.OnAmber,
+            fontSize = 15.5.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }

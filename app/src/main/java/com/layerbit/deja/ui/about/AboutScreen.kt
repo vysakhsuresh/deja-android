@@ -1,10 +1,6 @@
 package com.layerbit.deja.ui.about
 
 import android.app.Application
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +19,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,10 +34,12 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.BuildConfig
 import com.layerbit.deja.DejaApplication
+import com.layerbit.deja.brand.BrandLinks
 import com.layerbit.deja.data.db.LibraryStats
 import com.layerbit.deja.data.model.Category
 import com.layerbit.deja.ui.components.ActionRow
 import com.layerbit.deja.ui.components.DejaBottomBar
+import com.layerbit.deja.ui.components.DejaDialog
 import com.layerbit.deja.ui.components.ScreenHeader
 import com.layerbit.deja.ui.components.SectionLabel
 import com.layerbit.deja.ui.components.Tab
@@ -50,22 +51,6 @@ import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-
-/**
- * Where Deja points people outward.
- *
- * Opening a link here does not contradict the no-internet guarantee: Deja hands the URL to the
- * browser through an Intent and the browser does the fetching under its own permissions. Deja
- * itself still cannot open a socket, and nothing about the user's screenshots goes with it.
- *
- * TODO: point these at the real accounts before shipping to Play.
- */
-private object Links {
-    const val COFFEE = "https://buymeacoffee.com/layerbit"
-    const val SITE = "https://layerbit.co.in"
-    const val SUPPORT_EMAIL = "hello@layerbit.co.in"
-    const val PLAY_LISTING = "https://play.google.com/store/apps/details?id=com.layerbit.deja"
-}
 
 class AboutViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -100,6 +85,34 @@ fun AboutScreen(
     val stats by viewModel.stats.collectAsState()
     val topCategories by viewModel.topCategories.collectAsState()
     val topApps by viewModel.topApps.collectAsState()
+    var showHelp by remember { mutableStateOf(false) }
+
+    // Same two routes LayerLink offers, so getting help from any Layerbit app feels the same.
+    if (showHelp) {
+        DejaDialog(
+            title = "Get help",
+            message = "Deja collects nothing at all, so a message from you is genuinely the only " +
+                "way we hear about a problem.",
+            confirmLabel = "WhatsApp",
+            onConfirm = {
+                showHelp = false
+                BrandLinks.openUrl(context, BrandLinks.WHATSAPP_URL)
+            },
+            secondaryLabel = "Email",
+            onSecondary = {
+                showHelp = false
+                BrandLinks.sendEmail(
+                    context,
+                    subject = "Deja feedback",
+                    body = "\n\n---\nDeja ${BuildConfig.VERSION_NAME} · " +
+                        "Android ${android.os.Build.VERSION.SDK_INT} · " +
+                        "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+                )
+            },
+            dismissLabel = "Close",
+            onDismiss = { showHelp = false }
+        )
+    }
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(title = "About", onBack = onBack)
@@ -111,7 +124,7 @@ fun AboutScreen(
                 .padding(horizontal = 20.dp)
         ) {
             Text(
-                text = "deja",
+                text = "deja.",
                 color = DejaColors.Text,
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold
@@ -128,16 +141,8 @@ fun AboutScreen(
             Spacer(Modifier.height(12.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatTile(
-                    value = "${stats.total}",
-                    label = "screenshots",
-                    modifier = Modifier.weight(1f)
-                )
-                StatTile(
-                    value = formatBytes(stats.totalBytes),
-                    label = "on disk",
-                    modifier = Modifier.weight(1f)
-                )
+                StatTile("${stats.total}", "screenshots", Modifier.weight(1f))
+                StatTile(formatBytes(stats.totalBytes), "on disk", Modifier.weight(1f))
             }
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -158,11 +163,7 @@ fun AboutScreen(
                 SectionLabel("What you screenshot most")
                 Spacer(Modifier.height(12.dp))
                 topCategories.forEach { (category, count) ->
-                    ShareRow(
-                        label = category.label,
-                        count = count,
-                        fraction = count.toFloat() / stats.total
-                    )
+                    ShareRow(category.label, count, count.toFloat() / stats.total)
                     Spacer(Modifier.height(9.dp))
                 }
             }
@@ -172,11 +173,7 @@ fun AboutScreen(
                 SectionLabel("Where they come from")
                 Spacer(Modifier.height(12.dp))
                 topApps.forEach { row ->
-                    ShareRow(
-                        label = row.sourceApp,
-                        count = row.count,
-                        fraction = row.count.toFloat() / stats.total
-                    )
+                    ShareRow(row.sourceApp, row.count, row.count.toFloat() / stats.total)
                     Spacer(Modifier.height(9.dp))
                 }
                 Spacer(Modifier.height(4.dp))
@@ -197,19 +194,19 @@ fun AboutScreen(
                 title = "Buy me a coffee",
                 subtitle = "Deja has no ads, no accounts and no tracking. This is the whole " +
                     "business model.",
-                onClick = { context.openUrl(Links.COFFEE) }
+                onClick = { BrandLinks.openUrl(context, BrandLinks.COFFEE_URL) }
             )
             Spacer(Modifier.height(10.dp))
             ActionRow(
-                title = "Get help or send feedback",
-                subtitle = "Deja collects nothing, so this is the only way we hear about a bug.",
-                onClick = { context.sendFeedback() }
+                title = "Get help",
+                subtitle = "WhatsApp or email — whichever suits you",
+                onClick = { showHelp = true }
             )
             Spacer(Modifier.height(10.dp))
             ActionRow(
                 title = "Rate Deja",
                 subtitle = "Ratings are how people find an app that can't advertise itself.",
-                onClick = { context.openUrl(Links.PLAY_LISTING) }
+                onClick = { BrandLinks.openUrl(context, BrandLinks.PLAY_LISTING) }
             )
 
             Spacer(Modifier.height(24.dp))
@@ -220,7 +217,8 @@ fun AboutScreen(
                 text = "Deja reads the text in each screenshot on your phone and keeps a private " +
                     "index of it, so you can find things by what they say. Reading is done by an " +
                     "on-device model bundled inside the app — nothing is uploaded and nothing is " +
-                    "downloaded.",
+                    "downloaded. It only reads screenshots it hasn't seen before, so a full pass " +
+                    "is a one-time cost rather than something that happens every launch.",
                 color = DejaColors.Muted,
                 fontSize = 13.5.sp,
                 lineHeight = 21.sp
@@ -233,11 +231,22 @@ fun AboutScreen(
             )
 
             Spacer(Modifier.height(20.dp))
-            Text(
-                text = "Deja ${BuildConfig.VERSION_NAME} · by Layerbit · ${Links.SITE}",
-                color = DejaColors.Dim,
-                fontSize = 11.5.sp
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Deja ${BuildConfig.VERSION_NAME}  ·  by Layerbit  ·  ",
+                    color = DejaColors.Dim,
+                    fontSize = 11.5.sp
+                )
+                Text(
+                    text = BrandLinks.WEBSITE_LABEL,
+                    color = DejaColors.Amber,
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .padding(vertical = 4.dp)
+                )
+            }
             Spacer(Modifier.height(28.dp))
         }
 
@@ -296,26 +305,6 @@ private fun ShareRow(label: String, count: Int, fraction: Float) {
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium
         )
-    }
-}
-
-private fun Context.openUrl(url: String) {
-    runCatching {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-    }
-}
-
-private fun Context.sendFeedback() {
-    val body = "\n\n---\nDeja ${BuildConfig.VERSION_NAME} · Android ${android.os.Build.VERSION.SDK_INT}"
-    val intent = Intent(Intent.ACTION_SENDTO).apply {
-        data = Uri.parse("mailto:${Links.SUPPORT_EMAIL}")
-        putExtra(Intent.EXTRA_SUBJECT, "Deja feedback")
-        putExtra(Intent.EXTRA_TEXT, body)
-    }
-    try {
-        startActivity(intent)
-    } catch (error: ActivityNotFoundException) {
-        openUrl(Links.SITE)
     }
 }
 

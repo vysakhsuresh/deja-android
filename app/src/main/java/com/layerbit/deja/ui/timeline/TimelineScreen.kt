@@ -141,6 +141,8 @@ fun TimelineScreen(
     onOpenSearch: () -> Unit,
     onOpenShot: (Long) -> Unit,
     onSelectTab: (Tab) -> Unit,
+    partialAccess: Boolean,
+    onRequestMoreAccess: () -> Unit,
     viewModel: TimelineViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -154,7 +156,7 @@ fun TimelineScreen(
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(
-            title = "deja",
+            title = "deja.",
             trailing = { SettingsButton(onClick = { onSelectTab(Tab.PRIVACY) }) }
         )
 
@@ -169,6 +171,11 @@ fun TimelineScreen(
                 Column {
                     SearchField(onClick = onOpenSearch)
                     Spacer(Modifier.height(14.dp))
+
+                    if (partialAccess) {
+                        PartialAccessBanner(onSelectMore = onRequestMoreAccess)
+                        Spacer(Modifier.height(14.dp))
+                    }
 
                     ScanBanner(
                         progress = indexing,
@@ -317,6 +324,54 @@ private fun ScanBanner(progress: IndexProgress, onStop: () -> Unit, onResume: ()
             }
         }
         Spacer(Modifier.height(14.dp))
+    }
+}
+
+/**
+ * Android 14 lets someone grant a hand-picked set of images rather than the folder. Deja works
+ * fine that way - it just cannot see anything that was not picked - so the honest thing is to say
+ * so and offer the picker again, not to pretend the library is small.
+ */
+@Composable
+private fun PartialAccessBanner(onSelectMore: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(DejaColors.Surface)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = "Deja can only see the screenshots you picked",
+                color = DejaColors.Text,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = "Anything else on the phone stays invisible to it.",
+                color = DejaColors.Muted,
+                fontSize = 12.5.sp
+            )
+        }
+        Box(
+            modifier = Modifier
+                .height(TapTarget)
+                .clip(RoundedCornerShape(12.dp))
+                .background(DejaColors.BorderStrong)
+                .clickable(onClick = onSelectMore)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Select more",
+                color = DejaColors.Text,
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
 }
 

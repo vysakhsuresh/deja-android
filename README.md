@@ -82,6 +82,34 @@ which is where most of a real library ended up. Scoring is what fixes that.
   masked in the UI until tapped. The database is app-private and Deja has no network, so the
   threat being addressed is a glance over your shoulder, not exfiltration.
 
+### Scanning is incremental
+
+A full read is a **first-run cost, not a per-launch one**. Two things keep it that way:
+
+- The worker diffs MediaStore against the index and only OCRs screenshots it has never seen.
+- Before even starting a worker, Deja compares MediaStore's version counter
+  (`MediaStore.getGeneration`) with the one recorded at the last completed scan. Unchanged means
+  nothing on the device has been added, edited or deleted, so the scan is skipped entirely and no
+  progress UI appears at all.
+
+The counter covers the whole media volume rather than just screenshots, so an unrelated photo also
+moves it. That costs one MediaStore query that finds nothing new; it never causes a re-read.
+
+Wiping the index or re-reading on purpose clears the recorded counter, so those still work.
+
+### Permissions, including the refusals
+
+Android stops showing the permission dialog once someone has declined twice, so an app that only
+calls `launch()` becomes permanently useless with no way back short of reinstalling.
+`MediaPermission` distinguishes three states — never asked, refused but askable again, and refused
+for good — and the first screen changes accordingly, sending the user to the system settings page
+when that is the only thing left that works. The permission is re-read on every resume, so
+granting it in Settings takes effect straight away.
+
+Android 14's "Select photos" is treated as a supported state rather than a broken one: Deja
+declares `READ_MEDIA_VISUAL_USER_SELECTED`, indexes whatever was picked, and offers a way to pick
+more from both the timeline and the privacy screen.
+
 ### Upgrading from an earlier build
 
 The schema changed (source app, search blob), and the database is set to

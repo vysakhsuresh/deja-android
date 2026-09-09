@@ -9,17 +9,23 @@ import androidx.work.WorkerParameters
 import com.layerbit.deja.data.db.DejaDatabase
 import com.layerbit.deja.data.db.ShotEntity
 import com.layerbit.deja.data.model.Category
+import com.layerbit.deja.data.model.Extracted
 import com.layerbit.deja.data.model.ExtractedCodec
 import com.layerbit.deja.data.ocr.ScreenshotTextReader
+import com.layerbit.deja.data.scan.MediaGeneration
 import com.layerbit.deja.data.scan.MediaStoreScanner
 import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Reads any screenshot that is not in the index yet, and drops rows for screenshots that have
- * left the device. Runs through WorkManager so it survives the app being closed mid-scan; on a
- * large library the first pass takes a while and that is fine.
+ * Reads any screenshot that is not in the index yet, and drops rows for screenshots that have left
+ * the device. Runs through WorkManager so it survives the app being closed mid-scan.
+ *
+ * Only new work is ever done. A library that has already been read produces no OCR at all - the
+ * worker diffs MediaStore against the index and finds nothing to do - and callers can skip even
+ * that using the MediaStore version counter. Reading a thousand screenshots is a first-run cost,
+ * not a per-launch one.
  *
  * Stopping is a first-class outcome, not a failure. When the user stops a scan the work returns
  * successfully with the index left exactly as far as it got, and the interrupted flag is what
@@ -36,6 +42,10 @@ class IndexWorker(
         val reader = ScreenshotTextReader(applicationContext)
         val prefs = ScanPreferences(applicationContext)
 
+        // Captured before the work, so anything added while it runs leaves the number stale and
+        // earns another pass rather than being missed.
+        val generation = MediaGeneration.current(applicationContext)
+
         prefs.markStarted()
         IndexingState.scanning()
 
@@ -47,13 +57,21 @@ class IndexWorker(
             val removed = indexed - onDeviceIds
             if (removed.isNotEmpty()) dao.deleteByMediaIds(removed.toList())
 
+            val pending = onDevice.filterNot { it.mediaId in indexed }
+
+            // Nothing new and nothing gone: finish without ever showing a reading state, so
+            // reopening the app on an already-read library looks like what it is - instant.
+            if (pending.isEmpty()) {
+                prefs.markFinished(generation)
+                IndexingState.upToDate(onDevice.size)
+                return@withContext Result.success()
+            }
+
             // Progress is reported against the whole library, not just the unread part, so the
             // number on screen always matches how many screenshots the device actually has.
             val total = onDevice.size
             var done = (indexed - removed).size
             IndexingState.reading(done, total)
-
-            val pending = onDevice.filterNot { it.mediaId in indexed }
 
             for (shot in pending) {
                 if (isStopped) {
@@ -86,7 +104,7 @@ class IndexWorker(
                 IndexingState.advance(done)
             }
 
-            prefs.markFinished()
+            prefs.markFinished(generation)
             IndexingState.finished()
             Result.success()
         } catch (error: Exception) {
@@ -101,7 +119,7 @@ class IndexWorker(
         text: String,
         app: String,
         category: Category,
-        entities: List<com.layerbit.deja.data.model.Extracted>
+        entities: List<Extracted>
     ): String = buildString {
         append(text)
         if (app.isNotEmpty()) {
@@ -139,6 +157,7 @@ class IndexWorker(
 
         /** Replaces any running scan - used when the user explicitly asks to start over. */
         fun restart(context: Context) {
+            ScanPreferences(context).forgetGeneration()
             WorkManager.getInstance(context).enqueueUniqueWork(
                 UNIQUE_NAME,
                 ExistingWorkPolicy.REPLACE,

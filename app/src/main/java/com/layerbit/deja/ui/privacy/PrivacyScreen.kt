@@ -39,6 +39,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.DejaApplication
 import com.layerbit.deja.data.index.IndexWorker
 import com.layerbit.deja.data.index.IndexingState
+import com.layerbit.deja.data.index.ScanPreferences
 import com.layerbit.deja.ui.components.ActionRow
 import com.layerbit.deja.ui.components.DejaBottomBar
 import com.layerbit.deja.ui.components.DejaDialog
@@ -60,7 +61,12 @@ class PrivacyViewModel(app: Application) : AndroidViewModel(app) {
     val indexing = IndexingState.progress
 
     fun clearIndex() {
-        viewModelScope.launch { repository.clearIndex() }
+        viewModelScope.launch {
+            repository.clearIndex()
+            // Otherwise MediaStore's version counter still matches and the next launch would
+            // decide there is nothing to do, leaving the library permanently unread.
+            ScanPreferences(getApplication()).forgetGeneration()
+        }
     }
 }
 
@@ -71,6 +77,8 @@ private enum class Pending { NONE, RESCAN, CLEAR }
 fun PrivacyScreen(
     onBack: () -> Unit,
     onSelectTab: (Tab) -> Unit,
+    partialAccess: Boolean,
+    onRequestMoreAccess: () -> Unit,
     viewModel: PrivacyViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -174,7 +182,16 @@ fun PrivacyScreen(
             SectionLabel("The index")
             Spacer(Modifier.height(10.dp))
 
-            InfoCard(title = "What Deja can read", subtitle = "Your Screenshots folder only")
+            if (partialAccess) {
+                ActionRow(
+                    title = "Deja can only see the screenshots you picked",
+                    subtitle = "Android 14 lets you grant a hand-picked set. Tap to choose more, " +
+                        "or allow the whole folder.",
+                    onClick = onRequestMoreAccess
+                )
+            } else {
+                InfoCard(title = "What Deja can read", subtitle = "Your Screenshots folder only")
+            }
             Spacer(Modifier.height(10.dp))
             InfoCard(
                 title = "Indexed on this device",
