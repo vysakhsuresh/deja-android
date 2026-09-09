@@ -59,6 +59,7 @@ class PrivacyViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     val indexing = IndexingState.progress
+    val incomplete = IndexingState.incomplete
 
     fun clearIndex() {
         viewModelScope.launch {
@@ -84,6 +85,7 @@ fun PrivacyScreen(
     val context = LocalContext.current
     val indexed by viewModel.indexedCount.collectAsState()
     val indexing by viewModel.indexing.collectAsState()
+    val incomplete by viewModel.incomplete.collectAsState()
     var pending by remember { mutableStateOf(Pending.NONE) }
     var confirmClear by remember { mutableStateOf(false) }
 
@@ -209,6 +211,16 @@ fun PrivacyScreen(
                     title = "Stop the scan",
                     subtitle = "Keeps everything read so far. You can resume later.",
                     onClick = { IndexWorker.stop(context) }
+                )
+                Spacer(Modifier.height(10.dp))
+            } else if (incomplete) {
+                // Always reachable while a scan is unfinished, however the user answered the
+                // prompt at launch - so declining it once can never strand a partial index.
+                ActionRow(
+                    title = "Resume the scan",
+                    subtitle = "The last scan stopped before it finished. This picks up where " +
+                        "it left off.",
+                    onClick = { IndexWorker.enqueue(context) }
                 )
                 Spacer(Modifier.height(10.dp))
             }

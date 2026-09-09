@@ -21,11 +21,6 @@ class ScanPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_INTERRUPTED, false)
         set(value) = prefs.edit().putBoolean(KEY_INTERRUPTED, value).apply()
 
-    /** Set once the user has answered the resume-or-restart question for this interruption. */
-    var resumeAsked: Boolean
-        get() = prefs.getBoolean(KEY_RESUME_ASKED, false)
-        set(value) = prefs.edit().putBoolean(KEY_RESUME_ASKED, value).apply()
-
     /**
      * The MediaStore version as of the last completed scan. When it still matches, nothing on the
      * device has changed and there is nothing to do.
@@ -41,16 +36,12 @@ class ScanPreferences(context: Context) {
             current == lastGeneration
 
     fun markStarted() {
-        prefs.edit()
-            .putBoolean(KEY_INTERRUPTED, true)
-            .putBoolean(KEY_RESUME_ASKED, false)
-            .apply()
+        prefs.edit().putBoolean(KEY_INTERRUPTED, true).apply()
     }
 
     fun markFinished(generation: Long) {
         prefs.edit()
             .putBoolean(KEY_INTERRUPTED, false)
-            .putBoolean(KEY_RESUME_ASKED, false)
             .putLong(KEY_GENERATION, generation)
             .apply()
     }
@@ -62,7 +53,6 @@ class ScanPreferences(context: Context) {
 
     private companion object {
         const val KEY_INTERRUPTED = "interrupted"
-        const val KEY_RESUME_ASKED = "resume_asked"
         const val KEY_GENERATION = "last_generation"
     }
 }

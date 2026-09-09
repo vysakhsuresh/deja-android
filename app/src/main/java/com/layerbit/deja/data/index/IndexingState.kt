@@ -33,7 +33,24 @@ object IndexingState {
     private val _progress = MutableStateFlow(IndexProgress())
     val progress: StateFlow<IndexProgress> = _progress.asStateFlow()
 
+    private val _incomplete = MutableStateFlow(false)
+
+    /**
+     * True while a scan has been started and never finished - including across a restart, since it
+     * is seeded from disk when the app starts.
+     *
+     * The UI needs this separately from [progress] because the phase is only ever process-local:
+     * stopping a scan and then closing the app used to leave no trace of the unfinished work at
+     * all, so there was nothing left to offer a Resume against.
+     */
+    val incomplete: StateFlow<Boolean> = _incomplete.asStateFlow()
+
+    fun seedIncomplete(value: Boolean) {
+        _incomplete.value = value
+    }
+
     fun scanning() {
+        _incomplete.value = true
         _progress.value = _progress.value.copy(phase = ScanPhase.SCANNING)
     }
 
@@ -47,15 +64,18 @@ object IndexingState {
 
     fun finished() {
         val current = _progress.value
+        _incomplete.value = false
         _progress.value = current.copy(phase = ScanPhase.FINISHED, done = current.total)
     }
 
     /** Nothing needed reading. Skips the reading phase entirely so no progress UI ever appears. */
     fun upToDate(total: Int) {
+        _incomplete.value = false
         _progress.value = IndexProgress(ScanPhase.FINISHED, total, total)
     }
 
     fun stopped() {
+        _incomplete.value = true
         _progress.value = _progress.value.copy(phase = ScanPhase.STOPPED)
     }
 

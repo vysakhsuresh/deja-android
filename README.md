@@ -49,6 +49,7 @@ Two consequences that shape the code:
 | Detail | The screenshot, what Deja pulled out of it, one tap to copy, share and open. ID and card numbers are masked until tapped. |
 | Clean up | Six groups of screenshots that are safe to remove, with live totals, select-all, and a re-scan. Deletion goes through `MediaStore.createTrashRequest`, so items land in the system trash and stay recoverable, and the user confirms in a dialog Deja cannot bypass. |
 | Privacy | The permission story, what is indexed, and guarded controls to stop a scan, re-read, or wipe the index. |
+| Browse | Every category and every app as a readable vertical list with counts. The timeline's chip row only ever shows what fits, and the list grows as a scan runs, so this is where the whole thing lives. Picking anything drops you back on the timeline already filtered. |
 | About | What the library looks like in aggregate, plus support and feedback links. |
 
 ### Categorisation

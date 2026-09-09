@@ -43,8 +43,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.DejaApplication
 import com.layerbit.deja.data.db.AppCount
 import com.layerbit.deja.data.db.ShotEntity
-import com.layerbit.deja.data.index.IndexWorker
 import com.layerbit.deja.data.index.IndexProgress
+import com.layerbit.deja.data.index.IndexWorker
 import com.layerbit.deja.data.index.IndexingState
 import com.layerbit.deja.data.index.ScanPhase
 import com.layerbit.deja.data.model.Category
@@ -69,24 +69,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** What the grid is narrowed to. Category and app are mutually exclusive by design. */
-sealed interface TimelineFilter {
-    data object All : TimelineFilter
-    data class OfCategory(val category: Category) : TimelineFilter
-    data class FromApp(val app: String) : TimelineFilter
-}
-
 class TimelineViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repository = (app as DejaApplication).repository
-
-    private val _filter = MutableStateFlow<TimelineFilter>(TimelineFilter.All)
-    val filter = _filter.asStateFlow()
 
     private val _reclaimable = MutableStateFlow(0L)
     val reclaimable = _reclaimable.asStateFlow()
 
     val indexing = IndexingState.progress
+    val incomplete = IndexingState.incomplete
 
     val total = repository.observeCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
@@ -99,7 +90,7 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val shots = _filter
+    val shots = TimelineFilterState.filter
         .flatMapLatest { current ->
             when (current) {
                 is TimelineFilter.All -> repository.observeRecent()
@@ -111,22 +102,6 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         refreshReclaimable()
-    }
-
-    fun selectCategory(category: Category?) {
-        val current = _filter.value
-        _filter.value = when {
-            category == null -> TimelineFilter.All
-            current is TimelineFilter.OfCategory && current.category == category -> TimelineFilter.All
-            else -> TimelineFilter.OfCategory(category)
-        }
-    }
-
-    fun selectApp(app: String) {
-        val current = _filter.value
-        _filter.value =
-            if (current is TimelineFilter.FromApp && current.app == app) TimelineFilter.All
-            else TimelineFilter.FromApp(app)
     }
 
     fun refreshReclaimable() {
@@ -150,9 +125,10 @@ fun TimelineScreen(
     val counts by viewModel.counts.collectAsState()
     val apps by viewModel.apps.collectAsState()
     val total by viewModel.total.collectAsState()
-    val filter by viewModel.filter.collectAsState()
+    val filter by TimelineFilterState.filter.collectAsState()
     val reclaimable by viewModel.reclaimable.collectAsState()
     val indexing by viewModel.indexing.collectAsState()
+    val incomplete by viewModel.incomplete.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(
@@ -179,6 +155,7 @@ fun TimelineScreen(
 
                     ScanBanner(
                         progress = indexing,
+                        incomplete = incomplete,
                         onStop = { IndexWorker.stop(context) },
                         onResume = { IndexWorker.enqueue(context) }
                     )
@@ -196,8 +173,7 @@ fun TimelineScreen(
                         counts = counts,
                         apps = apps,
                         filter = filter,
-                        onSelectCategory = viewModel::selectCategory,
-                        onSelectApp = viewModel::selectApp
+                        onBrowseAll = { onSelectTab(Tab.BROWSE) }
                     )
                     Spacer(Modifier.height(6.dp))
                 }
@@ -205,7 +181,7 @@ fun TimelineScreen(
 
             if (shots.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    EmptyState(indexing.running)
+                    EmptyState(indexing.running, filter)
                 }
             }
 
@@ -247,9 +223,20 @@ private fun SearchField(onClick: () -> Unit) {
     }
 }
 
+/**
+ * @param incomplete a scan was started and never finished, including from a previous run of the
+ *   app. This is what keeps Resume reachable: the phase alone is process-local, so stopping a scan
+ *   and closing Deja used to leave no way back to it at all.
+ */
 @Composable
-private fun ScanBanner(progress: IndexProgress, onStop: () -> Unit, onResume: () -> Unit) {
-    if (progress.phase == ScanPhase.IDLE || progress.phase == ScanPhase.FINISHED) return
+private fun ScanBanner(
+    progress: IndexProgress,
+    incomplete: Boolean,
+    onStop: () -> Unit,
+    onResume: () -> Unit
+) {
+    val stopped = !progress.running && incomplete
+    if (!progress.running && !stopped) return
 
     Column {
         Column(
@@ -262,9 +249,9 @@ private fun ScanBanner(progress: IndexProgress, onStop: () -> Unit, onResume: ()
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = when (progress.phase) {
-                            ScanPhase.SCANNING -> "Looking for screenshots"
-                            ScanPhase.STOPPED -> "Scan stopped"
+                        text = when {
+                            stopped -> "Scan unfinished"
+                            progress.phase == ScanPhase.SCANNING -> "Looking for screenshots"
                             else -> "Reading your screenshots"
                         },
                         color = DejaColors.Text,
@@ -273,15 +260,13 @@ private fun ScanBanner(progress: IndexProgress, onStop: () -> Unit, onResume: ()
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = if (progress.total == 0) {
-                            "Just a moment"
-                        } else {
-                            "${progress.done} of ${progress.total} read" +
-                                if (progress.phase == ScanPhase.STOPPED) {
-                                    " · ${progress.remaining} left"
-                                } else {
-                                    ""
-                                }
+                        text = when {
+                            progress.total == 0 && stopped -> "Pick up where Deja left off"
+                            progress.total == 0 -> "Just a moment"
+                            stopped -> "${progress.done} of ${progress.total} read · " +
+                                "${progress.remaining} to go"
+
+                            else -> "${progress.done} of ${progress.total} read"
                         },
                         color = DejaColors.Muted,
                         fontSize = 12.5.sp
@@ -291,20 +276,14 @@ private fun ScanBanner(progress: IndexProgress, onStop: () -> Unit, onResume: ()
                     modifier = Modifier
                         .height(TapTarget - 8.dp)
                         .clip(RoundedCornerShape(11.dp))
-                        .background(
-                            if (progress.phase == ScanPhase.STOPPED) DejaColors.Amber
-                            else DejaColors.BorderStrong
-                        )
-                        .clickable(
-                            onClick = if (progress.phase == ScanPhase.STOPPED) onResume else onStop
-                        )
+                        .background(if (stopped) DejaColors.Amber else DejaColors.BorderStrong)
+                        .clickable(onClick = if (stopped) onResume else onStop)
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (progress.phase == ScanPhase.STOPPED) "Resume" else "Stop",
-                        color = if (progress.phase == ScanPhase.STOPPED) DejaColors.OnAmber
-                        else DejaColors.Text,
+                        text = if (stopped) "Resume" else "Stop",
+                        color = if (stopped) DejaColors.OnAmber else DejaColors.Text,
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -314,7 +293,7 @@ private fun ScanBanner(progress: IndexProgress, onStop: () -> Unit, onResume: ()
                 Spacer(Modifier.height(12.dp))
                 LinearProgressIndicator(
                     progress = { progress.fraction },
-                    color = DejaColors.Amber,
+                    color = if (stopped) DejaColors.Dim else DejaColors.Amber,
                     trackColor = DejaColors.BorderStrong,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -424,8 +403,7 @@ private fun FilterChips(
     counts: Map<Category, Int>,
     apps: List<AppCount>,
     filter: TimelineFilter,
-    onSelectCategory: (Category?) -> Unit,
-    onSelectApp: (String) -> Unit
+    onBrowseAll: () -> Unit
 ) {
     val present = Category.entries.filter { (counts[it] ?: 0) > 0 }
 
@@ -436,7 +414,7 @@ private fun FilterChips(
                     label = "All",
                     count = total,
                     active = filter is TimelineFilter.All,
-                    onClick = { onSelectCategory(null) }
+                    onClick = { TimelineFilterState.clear() }
                 )
             }
             present.forEach { category ->
@@ -445,13 +423,14 @@ private fun FilterChips(
                         label = category.label,
                         count = counts[category] ?: 0,
                         active = filter is TimelineFilter.OfCategory && filter.category == category,
-                        onClick = { onSelectCategory(category) }
+                        onClick = { TimelineFilterState.toggleCategory(category) }
                     )
                 }
             }
+            // The chip row only ever shows what fits; Browse is where the whole list lives.
+            item { BrowseChip(onClick = onBrowseAll) }
         }
 
-        // Only worth a row of its own once the filenames actually carried app names.
         if (apps.isNotEmpty()) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 apps.forEach { row ->
@@ -460,13 +439,33 @@ private fun FilterChips(
                             label = row.sourceApp,
                             count = row.count,
                             active = filter is TimelineFilter.FromApp && filter.app == row.sourceApp,
-                            onClick = { onSelectApp(row.sourceApp) },
+                            onClick = { TimelineFilterState.toggleApp(row.sourceApp) },
                             accent = true
                         )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun BrowseChip(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .height(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(DejaColors.SurfaceDim)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "See all",
+            color = DejaColors.Amber,
+            fontSize = 13.5.sp,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
@@ -543,24 +542,49 @@ private fun ShotTile(shot: ShotEntity, onClick: () -> Unit) {
 }
 
 @Composable
-private fun EmptyState(indexing: Boolean) {
+private fun EmptyState(indexing: Boolean, filter: TimelineFilter) {
+    val filtered = filter !is TimelineFilter.All
     Column(Modifier.padding(vertical = 60.dp)) {
         Text(
-            text = if (indexing) "Still reading…" else "Nothing here yet",
+            text = when {
+                filtered -> "Nothing in ${filter.label}"
+                indexing -> "Still reading…"
+                else -> "Nothing here yet"
+            },
             color = DejaColors.Text,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = if (indexing) {
-                "Screenshots appear as Deja reads them."
-            } else {
-                "Take a screenshot and it will show up here."
+            text = when {
+                filtered && indexing -> "Deja is still reading — this may fill up as it goes."
+                filtered -> "Tap All to see everything again."
+                indexing -> "Screenshots appear as Deja reads them."
+                else -> "Take a screenshot and it will show up here."
             },
             color = DejaColors.Muted,
             fontSize = 13.5.sp
         )
+        if (filtered) {
+            Spacer(Modifier.height(14.dp))
+            Box(
+                modifier = Modifier
+                    .height(TapTarget)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(DejaColors.Surface)
+                    .clickable { TimelineFilterState.clear() }
+                    .padding(horizontal = 18.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Show all screenshots",
+                    color = DejaColors.Text,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
     }
 }
 

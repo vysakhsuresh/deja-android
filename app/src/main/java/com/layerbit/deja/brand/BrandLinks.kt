@@ -15,7 +15,8 @@ import android.net.Uri
  */
 object BrandLinks {
     const val WEBSITE_URL = "https://layerbit.co.in"
-    const val WEBSITE_LABEL = "layerbit.co.in"
+    /** How the company is named in the UI - never a bare URL. Matches LayerLink's footer. */
+    const val BRAND_LABEL = "Layerbit AI"
     const val COFFEE_URL = "https://www.buymeacoffee.com/layerbit"
     const val WHATSAPP_URL = "https://wa.me/916282595823"
     const val SUPPORT_EMAIL = "ceo@layerbit.co.in"

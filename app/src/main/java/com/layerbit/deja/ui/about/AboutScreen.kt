@@ -2,6 +2,7 @@ package com.layerbit.deja.ui.about
 
 import android.app.Application
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -233,18 +234,19 @@ fun AboutScreen(
             Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Deja ${BuildConfig.VERSION_NAME}  ·  by Layerbit  ·  ",
+                    text = "Deja ${BuildConfig.VERSION_NAME}  ·  Powered by ",
                     color = DejaColors.Dim,
-                    fontSize = 11.5.sp
+                    fontSize = 12.sp
                 )
                 Text(
-                    text = BrandLinks.WEBSITE_LABEL,
+                    text = BrandLinks.BRAND_LABEL,
                     color = DejaColors.Amber,
-                    fontSize = 11.5.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .padding(vertical = 4.dp)
+                        .clickable { BrandLinks.openUrl(context, BrandLinks.WEBSITE_URL) }
+                        .padding(vertical = 6.dp, horizontal = 2.dp)
                 )
             }
             Spacer(Modifier.height(28.dp))

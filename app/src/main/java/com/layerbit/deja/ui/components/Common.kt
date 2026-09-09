@@ -17,10 +17,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -83,7 +84,8 @@ fun ScreenHeader(
 }
 
 enum class Tab(val label: String, val icon: ImageVector) {
-    TIMELINE("Timeline", Icons.Filled.Menu),
+    TIMELINE("Timeline", Icons.Filled.Home),
+    BROWSE("Browse", Icons.AutoMirrored.Filled.List),
     CLEAN("Clean", Icons.Filled.Delete),
     PRIVACY("Privacy", Icons.Filled.Lock),
     ABOUT("About", Icons.Filled.Info)
@@ -129,7 +131,8 @@ fun DejaBottomBar(current: Tab, onSelect: (Tab) -> Unit) {
                     Text(
                         text = tab.label,
                         color = if (active) DejaColors.Amber else DejaColors.Dim,
-                        fontSize = 11.sp,
+                        fontSize = 10.5.sp,
+                        maxLines = 1,
                         fontWeight = if (active) FontWeight.Medium else FontWeight.Normal
                     )
                 }
