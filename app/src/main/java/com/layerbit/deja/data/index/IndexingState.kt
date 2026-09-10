@@ -79,7 +79,9 @@ object IndexingState {
         _progress.value = _progress.value.copy(phase = ScanPhase.STOPPED)
     }
 
+    /** Clears everything, including whether a scan was left unfinished. */
     fun reset() {
+        _incomplete.value = false
         _progress.value = IndexProgress()
     }
 }

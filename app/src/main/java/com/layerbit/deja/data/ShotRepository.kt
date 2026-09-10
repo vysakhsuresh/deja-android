@@ -143,6 +143,15 @@ class ShotRepository(private val context: Context) {
     fun trashRequest(uris: List<Uri>): PendingIntent =
         MediaStore.createTrashRequest(context.contentResolver, uris, true)
 
+    /**
+     * Deletes screenshots outright - no trash, no recovery. Same system-confirmed flow as
+     * [trashRequest] (the user still has to approve it in a dialog Deja cannot bypass), just
+     * without the safety net. `createDeleteRequest` was added in the same API level this app
+     * already requires, so no version check is needed.
+     */
+    fun deleteForeverRequest(uris: List<Uri>): PendingIntent =
+        MediaStore.createDeleteRequest(context.contentResolver, uris)
+
     suspend fun forgetMediaIds(mediaIds: List<Long>) = dao.deleteByMediaIds(mediaIds)
 
     suspend fun clearIndex() = dao.clear()

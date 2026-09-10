@@ -17,11 +17,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -85,7 +85,10 @@ fun ScreenHeader(
 
 enum class Tab(val label: String, val icon: ImageVector) {
     TIMELINE("Timeline", Icons.Filled.Home),
-    BROWSE("Browse", Icons.AutoMirrored.Filled.List),
+    // Menu (a stacked-lines glyph) rather than a list-with-bullets icon: material-icons-core ships
+    // only a small curated subset and Menu is reliably part of it, where a dedicated "list" glyph
+    // is not.
+    BROWSE("Browse", Icons.Filled.Menu),
     CLEAN("Clean", Icons.Filled.Delete),
     PRIVACY("Privacy", Icons.Filled.Lock),
     ABOUT("About", Icons.Filled.Info)

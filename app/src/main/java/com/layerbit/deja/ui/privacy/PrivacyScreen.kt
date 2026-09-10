@@ -39,7 +39,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.DejaApplication
 import com.layerbit.deja.data.index.IndexWorker
 import com.layerbit.deja.data.index.IndexingState
-import com.layerbit.deja.data.index.ScanPreferences
 import com.layerbit.deja.ui.components.ActionRow
 import com.layerbit.deja.ui.components.DejaBottomBar
 import com.layerbit.deja.ui.components.DejaDialog
@@ -64,9 +63,12 @@ class PrivacyViewModel(app: Application) : AndroidViewModel(app) {
     fun clearIndex() {
         viewModelScope.launch {
             repository.clearIndex()
-            // Otherwise MediaStore's version counter still matches and the next launch would
-            // decide there is nothing to do, leaving the library permanently unread.
-            ScanPreferences(getApplication()).forgetGeneration()
+            IndexingState.reset()
+            // restart() forgets the recorded MediaStore generation and enqueues a fresh scan, so
+            // reading starts again immediately instead of waiting for the next app launch - which
+            // is exactly the state this used to leave Deja in: an empty index and nothing that
+            // would ever notice, until the app was closed and reopened.
+            IndexWorker.restart(getApplication())
         }
     }
 }
@@ -127,7 +129,6 @@ fun PrivacyScreen(
             onConfirm = {
                 confirmClear = false
                 viewModel.clearIndex()
-                IndexingState.reset()
             },
             onDismiss = { confirmClear = false }
         )
