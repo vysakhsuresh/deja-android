@@ -34,7 +34,13 @@ data class ShotEntity(
      * "wifi password", "PhonePe" and "Payments & bills" without three separate lookups.
      */
     val searchBlob: String,
-    val indexedAtMillis: Long
+    val indexedAtMillis: Long,
+    /**
+     * Kept on purpose. A pinned screenshot is excluded from every Clean up group, which is the
+     * whole point of it: the one way to make "tidy up my screenshots" safe enough to actually use
+     * is to let someone mark the handful they will never want gone.
+     */
+    val pinned: Boolean = false
 )
 
 /**

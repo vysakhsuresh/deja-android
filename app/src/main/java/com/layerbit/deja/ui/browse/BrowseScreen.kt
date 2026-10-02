@@ -2,7 +2,6 @@ package com.layerbit.deja.ui.browse
 
 import android.app.Application
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +40,7 @@ import com.layerbit.deja.ui.components.ScreenHeader
 import com.layerbit.deja.ui.components.SectionLabel
 import com.layerbit.deja.ui.components.Tab
 import com.layerbit.deja.ui.components.TapTarget
+import com.layerbit.deja.ui.components.tappable
 import com.layerbit.deja.ui.theme.DejaColors
 import com.layerbit.deja.ui.timeline.TimelineFilter
 import com.layerbit.deja.ui.timeline.TimelineFilterState
@@ -53,6 +53,9 @@ class BrowseViewModel(app: Application) : AndroidViewModel(app) {
     private val repository = (app as DejaApplication).repository
 
     val total = repository.observeCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    val pinnedCount = repository.observePinnedCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     val categories = repository.observeCategoryCounts()
@@ -83,6 +86,7 @@ fun BrowseScreen(
     viewModel: BrowseViewModel = viewModel()
 ) {
     val total by viewModel.total.collectAsState()
+    val pinnedCount by viewModel.pinnedCount.collectAsState()
     val categories by viewModel.categories.collectAsState()
     val apps by viewModel.apps.collectAsState()
     val activeState by TimelineFilterState.filter.collectAsState()
@@ -109,6 +113,17 @@ fun BrowseScreen(
                     active = active is TimelineFilter.All,
                     onClick = { pick(TimelineFilter.All) }
                 )
+            }
+
+            if (pinnedCount > 0) {
+                item {
+                    BrowseRow(
+                        label = "Kept",
+                        count = pinnedCount,
+                        active = active is TimelineFilter.Pinned,
+                        onClick = { pick(TimelineFilter.Pinned) }
+                    )
+                }
             }
 
             item {
@@ -167,7 +182,7 @@ private fun BrowseRow(label: String, count: Int, active: Boolean, onClick: () ->
             .height(TapTarget + 10.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(if (active) DejaColors.AmberDim else DejaColors.SurfaceDim)
-            .clickable(onClick = onClick)
+            .tappable(onClick = onClick)
             .padding(horizontal = 15.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

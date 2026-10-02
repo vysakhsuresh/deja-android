@@ -3,6 +3,11 @@ package com.layerbit.deja.ui
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +41,7 @@ import com.layerbit.deja.ui.components.Tab
 import com.layerbit.deja.ui.detail.DetailScreen
 import com.layerbit.deja.ui.onboarding.OnboardingScreen
 import com.layerbit.deja.ui.privacy.PrivacyScreen
+import com.layerbit.deja.ui.search.SearchRequest
 import com.layerbit.deja.ui.search.SearchScreen
 import com.layerbit.deja.ui.theme.DejaColors
 import com.layerbit.deja.ui.timeline.TimelineScreen
@@ -196,7 +202,17 @@ private fun DejaNavHost(partialAccess: Boolean, onRequestMoreAccess: () -> Unit)
         }
     }
 
-    NavHost(navController = navController, startDestination = Routes.TIMELINE) {
+    // Movement with a direction: going deeper slides in from the right and comes back out the
+    // same way, so the back gesture confirms where you were rather than cutting to it. Kept short
+    // - 200ms is felt, 400ms is waited for.
+    NavHost(
+        navController = navController,
+        startDestination = Routes.TIMELINE,
+        enterTransition = { fadeIn(tween(170)) + slideInHorizontally(tween(220)) { it / 16 } },
+        exitTransition = { fadeOut(tween(130)) },
+        popEnterTransition = { fadeIn(tween(170)) },
+        popExitTransition = { fadeOut(tween(130)) + slideOutHorizontally(tween(220)) { it / 16 } }
+    ) {
         composable(Routes.TIMELINE) {
             TimelineScreen(
                 onOpenSearch = { navController.navigate(Routes.SEARCH) },
@@ -244,7 +260,12 @@ private fun DejaNavHost(partialAccess: Boolean, onRequestMoreAccess: () -> Unit)
         ) { entry ->
             DetailScreen(
                 shotId = entry.arguments?.getLong("shotId") ?: 0L,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onSearch = { value ->
+                    SearchRequest.request(value)
+                    navController.navigate(Routes.SEARCH)
+                },
+                onOpenTimeline = { goTab(Tab.TIMELINE) }
             )
         }
     }

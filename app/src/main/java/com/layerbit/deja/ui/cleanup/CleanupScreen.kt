@@ -7,7 +7,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +28,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,10 +61,13 @@ import com.layerbit.deja.ui.components.ScreenHeader
 import com.layerbit.deja.ui.components.ShotThumbnail
 import com.layerbit.deja.ui.components.Tab
 import com.layerbit.deja.ui.components.TapTarget
+import com.layerbit.deja.ui.components.tappable
 import com.layerbit.deja.ui.components.formatBytes
 import com.layerbit.deja.ui.theme.DejaColors
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class CleanupUiState(
@@ -93,6 +96,9 @@ class CleanupViewModel(app: Application) : AndroidViewModel(app) {
     val state = _state.asStateFlow()
 
     val indexing = IndexingState.progress
+
+    val pinnedCount = repository.observePinnedCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     /** Screenshots handed to the last delete request, kept so the index can drop them on success. */
     private var pending: List<ShotEntity> = emptyList()
@@ -210,6 +216,7 @@ fun CleanupScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val indexing by viewModel.indexing.collectAsState()
+    val pinnedCount by viewModel.pinnedCount.collectAsState()
     val context = LocalContext.current
     var confirmRescan by remember { mutableStateOf(false) }
     var confirmForever by remember { mutableStateOf(false) }
@@ -282,7 +289,7 @@ fun CleanupScreen(
                 Box(
                     modifier = Modifier
                         .size(TapTarget)
-                        .clickable {
+                        .tappable {
                             if (indexing.running) confirmRescan = true
                             else IndexWorker.restart(context)
                         },
@@ -323,6 +330,23 @@ fun CleanupScreen(
                         fontSize = 12.5.sp,
                         lineHeight = 18.sp
                     )
+                    if (pinnedCount > 0) {
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.Star,
+                                contentDescription = null,
+                                tint = DejaColors.Amber,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "$pinnedCount kept — never offered here",
+                                color = DejaColors.Amber,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
                     state.freedBytes?.let {
                         Spacer(Modifier.height(10.dp))
                         Text(
@@ -349,7 +373,7 @@ fun CleanupScreen(
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .clickable { viewModel.toggleAll() }
+                                .tappable { viewModel.toggleAll() }
                                 .padding(vertical = 8.dp, horizontal = 2.dp)
                         )
                     }
@@ -396,7 +420,7 @@ fun CleanupScreen(
                         .height(TapTarget + 6.dp)
                         .clip(RoundedCornerShape(15.dp))
                         .background(if (enabled) DejaColors.Amber else DejaColors.Border)
-                        .clickable(enabled = enabled) {
+                        .tappable(enabled = enabled) {
                             viewModel.trashRequest()?.let { sender ->
                                 trashLauncher.launch(IntentSenderRequest.Builder(sender).build())
                             }
@@ -421,7 +445,7 @@ fun CleanupScreen(
                         .fillMaxWidth()
                         .height(TapTarget)
                         .clip(RoundedCornerShape(13.dp))
-                        .clickable(enabled = enabled) { confirmForever = true },
+                        .tappable(enabled = enabled) { confirmForever = true },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -473,7 +497,7 @@ private fun GroupRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onToggleGroup)
+                .tappable(onClick = onToggleGroup)
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -537,7 +561,7 @@ private fun GroupRow(
             Box(
                 modifier = Modifier
                     .size(TapTarget - 8.dp)
-                    .clickable(onClick = onToggleExpand),
+                    .tappable(onClick = onToggleExpand),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -584,9 +608,27 @@ private fun ExpandedTile(
         modifier = modifier
             .aspectRatio(3f / 4f)
             .clip(RoundedCornerShape(9.dp))
-            .clickable(onClick = onClick)
+            .tappable(pressScale = 1.04f, onClick = onClick)
     ) {
         ShotThumbnail(uri = Uri.parse(shot.uri), size = 160, modifier = Modifier.fillMaxSize())
+        if (shot.pinned) {
+            Box(
+                modifier = Modifier
+                    .padding(4.dp)
+                    .align(Alignment.TopStart)
+                    .size(16.dp)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Star,
+                    contentDescription = "Kept",
+                    tint = DejaColors.Amber,
+                    modifier = Modifier.size(10.dp)
+                )
+            }
+        }
         if (!selected) {
             Box(Modifier.fillMaxSize().background(DejaColors.Background.copy(alpha = 0.55f)))
         }

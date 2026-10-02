@@ -3,7 +3,6 @@ package com.layerbit.deja.ui.cleanup
 import android.app.Application
 import android.net.Uri
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +39,7 @@ import com.layerbit.deja.data.db.ShotEntity
 import com.layerbit.deja.ui.components.ScreenHeader
 import com.layerbit.deja.ui.components.ShotThumbnail
 import com.layerbit.deja.ui.components.TapTarget
+import com.layerbit.deja.ui.components.tappable
 import com.layerbit.deja.ui.theme.DejaColors
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -93,7 +94,7 @@ fun PickScreen(onDone: () -> Unit, onCancel: () -> Unit, viewModel: PickViewMode
                     modifier = Modifier
                         .height(TapTarget)
                         .clip(RoundedCornerShape(10.dp))
-                        .clickable {
+                        .tappable {
                             viewModel.confirm()
                             onDone()
                         }
@@ -111,7 +112,7 @@ fun PickScreen(onDone: () -> Unit, onCancel: () -> Unit, viewModel: PickViewMode
         )
         Text(
             text = "Tap any screenshot to select it for Clean up. Nothing is removed on this " +
-                "screen.",
+                "screen. A star means you marked it as kept — picking it here overrides that.",
             color = DejaColors.Dim,
             fontSize = 12.5.sp,
             lineHeight = 18.sp,
@@ -149,9 +150,29 @@ private fun PickTile(shot: ShotEntity, selected: Boolean, onClick: () -> Unit) {
         modifier = Modifier
             .aspectRatio(3f / 4f)
             .clip(RoundedCornerShape(11.dp))
-            .clickable(onClick = onClick)
+            .tappable(pressScale = 1.04f, onClick = onClick)
     ) {
         ShotThumbnail(uri = Uri.parse(shot.uri), modifier = Modifier.fillMaxSize())
+        if (shot.pinned) {
+            // Picking by hand overrides the keep flag - that is the point of picking by hand -
+            // so this is a warning rather than a lock.
+            Box(
+                modifier = Modifier
+                    .padding(6.dp)
+                    .align(Alignment.TopStart)
+                    .size(20.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Star,
+                    contentDescription = "Kept",
+                    tint = DejaColors.Amber,
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+        }
         if (selected) {
             Box(Modifier.fillMaxSize().background(DejaColors.Amber.copy(alpha = 0.30f)))
         }

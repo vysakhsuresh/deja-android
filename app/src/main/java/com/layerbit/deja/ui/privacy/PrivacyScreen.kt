@@ -45,6 +45,7 @@ import com.layerbit.deja.ui.components.DejaDialog
 import com.layerbit.deja.ui.components.ScreenHeader
 import com.layerbit.deja.ui.components.SectionLabel
 import com.layerbit.deja.ui.components.Tab
+import com.layerbit.deja.ui.search.SearchHistory
 import com.layerbit.deja.ui.theme.DejaColors
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -53,6 +54,7 @@ import kotlinx.coroutines.launch
 class PrivacyViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repository = (app as DejaApplication).repository
+    private val searchHistory = SearchHistory(app)
 
     val indexedCount = repository.observeCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
@@ -63,6 +65,9 @@ class PrivacyViewModel(app: Application) : AndroidViewModel(app) {
     fun clearIndex() {
         viewModelScope.launch {
             repository.clearIndex()
+            // "Everything Deja knows" has to mean everything, including the handful of things
+            // typed into the search box. Leaving those behind would make the control a lie.
+            searchHistory.clear()
             IndexingState.reset()
             // restart() forgets the recorded MediaStore generation and enqueues a fresh scan, so
             // reading starts again immediately instead of waiting for the next app launch - which

@@ -3,7 +3,6 @@ package com.layerbit.deja.ui.search
 import android.app.Application
 import android.net.Uri
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,8 +22,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,8 +41,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
@@ -51,6 +59,9 @@ import com.layerbit.deja.data.index.SearchQuery
 import com.layerbit.deja.data.model.Category
 import com.layerbit.deja.ui.components.ScreenHeader
 import com.layerbit.deja.ui.components.ShotThumbnail
+import com.layerbit.deja.ui.components.TapTarget
+import com.layerbit.deja.ui.components.tappable
+import com.layerbit.deja.ui.detail.DetailContext
 import com.layerbit.deja.ui.theme.DejaColors
 import com.layerbit.deja.ui.theme.SpaceGrotesk
 import java.time.Instant
@@ -75,24 +86,67 @@ private val suggestions = listOf(
     "otp", "wifi password", "receipt", "boarding pass", "aadhaar", "amount", "booking"
 )
 
+/**
+ * A search another screen asked for, waiting to be picked up.
+ *
+ * "Find in Deja" on an extracted value is the one navigation in the app that carries a payload,
+ * and a booking reference has no business being URL-encoded into a route. Consumed once, so
+ * coming back to search later does not silently re-run it.
+ */
+object SearchRequest {
+
+    @Volatile
+    private var pending: String? = null
+
+    fun request(query: String) {
+        pending = query
+    }
+
+    fun take(): String? {
+        val value = pending
+        pending = null
+        return value
+    }
+}
+
 class SearchViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repository = (app as DejaApplication).repository
+    private val history = SearchHistory(app)
+
+    val recent = history.recent
 
     private val _query = MutableStateFlow("")
     val query = _query.asStateFlow()
+
+    private val _searching = MutableStateFlow(false)
+    val searching = _searching.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     val results = _query
         .debounce(200)
         .flatMapLatest { raw ->
-            flow { emit(if (raw.isBlank()) emptyList() else repository.search(raw)) }
+            flow {
+                if (raw.isBlank()) {
+                    emit(emptyList())
+                    return@flow
+                }
+                _searching.value = true
+                val found = repository.search(raw)
+                _searching.value = false
+                // Only remembered once it actually found something. A half-typed word that
+                // matched nothing is not a search anyone wants offered back to them.
+                if (found.isNotEmpty()) history.record(raw)
+                emit(found)
+            }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun onQueryChange(value: String) {
         _query.value = value
     }
+
+    fun clearHistory() = history.clear()
 }
 
 @Composable
@@ -103,9 +157,17 @@ fun SearchScreen(
 ) {
     val query by viewModel.query.collectAsState()
     val results by viewModel.results.collectAsState()
+    val searching by viewModel.searching.collectAsState()
+    val recent by viewModel.recent.collectAsState()
     val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
 
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    val tokens = remember(query) { SearchQuery.tokenise(query) }
+
+    LaunchedEffect(Unit) {
+        val requested = SearchRequest.take()
+        if (requested != null) viewModel.onQueryChange(requested) else focusRequester.requestFocus()
+    }
 
     Column(
         Modifier
@@ -121,7 +183,7 @@ fun SearchScreen(
                 .height(56.dp)
                 .clip(RoundedCornerShape(15.dp))
                 .background(DejaColors.Surface)
-                .padding(horizontal = 15.dp),
+                .padding(start = 15.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -149,33 +211,86 @@ fun SearchScreen(
                         fontFamily = SpaceGrotesk
                     ),
                     cursorBrush = SolidColor(DejaColors.Amber),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    // Results are already live as you type, so the Search key's only job is to
+                    // get the keyboard out of the way of them.
+                    keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focusRequester)
                 )
+            }
+            if (query.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .size(TapTarget - 8.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .tappable(onClick = { viewModel.onQueryChange("") }),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Clear",
+                        tint = DejaColors.Dim,
+                        modifier = Modifier.size(17.dp)
+                    )
+                }
             }
         }
 
         Spacer(Modifier.height(14.dp))
 
         if (query.isBlank()) {
+            if (recent.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "RECENT",
+                        color = DejaColors.Dim,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = "Clear",
+                        color = DejaColors.Dim,
+                        fontSize = 12.sp,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .tappable(onClick = { viewModel.clearHistory() })
+                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    recent.forEach { past ->
+                        item(key = "recent-$past") {
+                            HintChip(
+                                label = past,
+                                accent = true,
+                                onClick = { viewModel.onQueryChange(past) }
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
+            }
+
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 suggestions.forEach { hint ->
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .height(40.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(DejaColors.Surface)
-                                .clickable { viewModel.onQueryChange(hint) }
-                                .padding(horizontal = 14.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(text = hint, color = DejaColors.Muted, fontSize = 13.5.sp)
-                        }
+                    item(key = "hint-$hint") {
+                        HintChip(label = hint, onClick = { viewModel.onQueryChange(hint) })
                     }
                 }
             }
@@ -186,6 +301,7 @@ fun SearchScreen(
             text = when {
                 query.isBlank() -> "Deja searches the words inside your screenshots, plus the app " +
                     "each one came from."
+                searching && results.isEmpty() -> "Looking…"
                 results.isEmpty() -> "No matches on this device."
                 results.size == 1 -> "1 match · searched on this device"
                 else -> "${results.size} matches · searched on this device"
@@ -204,24 +320,53 @@ fun SearchScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(results, key = { it.id }) { shot ->
-                ResultCard(shot = shot, query = query, onClick = { onOpenShot(shot.id) })
+                ResultCard(
+                    shot = shot,
+                    tokens = tokens,
+                    onClick = {
+                        // Swiping sideways in the detail view should walk the results, not the
+                        // timeline you happened to open search from.
+                        DetailContext.set(results.map { it.id })
+                        onOpenShot(shot.id)
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ResultCard(shot: ShotEntity, query: String, onClick: () -> Unit) {
+private fun HintChip(label: String, accent: Boolean = false, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .height(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (accent) DejaColors.SurfaceDim else DejaColors.Surface)
+            .tappable(onClick = onClick)
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = if (accent) DejaColors.Text else DejaColors.Muted,
+            fontSize = 13.5.sp
+        )
+    }
+}
+
+@Composable
+private fun ResultCard(shot: ShotEntity, tokens: List<String>, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(DejaColors.SurfaceDim)
-            .clickable(onClick = onClick)
+            .tappable(onClick = onClick)
             .padding(13.dp)
     ) {
         ShotThumbnail(
             uri = Uri.parse(shot.uri),
+            contentDescription = null,
             modifier = Modifier
                 .width(66.dp)
                 .height(88.dp)
@@ -246,10 +391,19 @@ private fun ResultCard(shot: ShotEntity, query: String, onClick: () -> Unit) {
                     color = DejaColors.Dim,
                     fontSize = 11.sp
                 )
+                if (shot.pinned) {
+                    Spacer(Modifier.width(7.dp))
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = "Kept",
+                        tint = DejaColors.Amber,
+                        modifier = Modifier.size(11.dp)
+                    )
+                }
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = snippet(shot.text, query),
+                text = highlighted(snippet(shot.text, tokens), tokens),
                 color = DejaColors.Muted,
                 fontSize = 13.5.sp,
                 lineHeight = 19.sp,
@@ -259,12 +413,35 @@ private fun ResultCard(shot: ShotEntity, query: String, onClick: () -> Unit) {
     }
 }
 
+/**
+ * Picks out the terms that matched inside the snippet.
+ *
+ * Small thing, large effect: without it every result is a grey paragraph and the eye has to
+ * re-read each one to work out why it is in the list. With it, the reason a screenshot matched
+ * is the first thing visible on the card.
+ */
+private fun highlighted(text: String, tokens: List<String>): AnnotatedString =
+    buildAnnotatedString {
+        append(text)
+        val style = SpanStyle(
+            color = DejaColors.AmberBright,
+            fontWeight = FontWeight.SemiBold
+        )
+        tokens.forEach { token ->
+            var at = text.indexOf(token, ignoreCase = true)
+            while (at >= 0) {
+                addStyle(style, at, at + token.length)
+                at = text.indexOf(token, startIndex = at + token.length, ignoreCase = true)
+            }
+        }
+    }
+
 /** The slice of OCR text around the first term that matched, so the hit is visible in the list. */
-private fun snippet(text: String, query: String, radius: Int = 60): String {
+private fun snippet(text: String, tokens: List<String>, radius: Int = 60): String {
     val flat = text.replace(Regex("\\s+"), " ").trim()
     if (flat.isEmpty()) return "No readable text"
 
-    val hit = SearchQuery.tokenise(query)
+    val hit = tokens
         .mapNotNull { token -> flat.indexOf(token, ignoreCase = true).takeIf { it >= 0 } }
         .minOrNull() ?: return flat.take(radius * 2)
 

@@ -44,9 +44,10 @@ Two consequences that shape the code:
 | | |
 |---|---|
 | Indexing | Scans the Screenshots bucket via MediaStore, OCRs anything new, drops rows for screenshots deleted elsewhere. Runs in WorkManager so it survives the app closing, and can be stopped and resumed. |
-| Timeline | Screenshots grouped by day, filterable by category **and by the app they came from**, with live scan progress and a stop control. |
-| Search | Full-text search over the OCR'd text, the app name, the category and the non-sensitive extracted values — ranked by how many of your terms actually hit. |
-| Detail | The screenshot, what Deja pulled out of it, one tap to copy, share and open. ID and card numbers are masked until tapped. |
+| Timeline | Screenshots grouped by day, filterable by category **and by the app they came from**, with live scan progress and a stop control. Long-press anything to select, then keep, share or trash the lot in one go. Kept screenshots get a shelf along the top. |
+| Search | Full-text search over the OCR'd text, the app name, the category and the non-sensitive extracted values — ranked by how many of your terms actually hit, with the matched words picked out in each result. Remembers the last eight searches that found something. |
+| Detail | Swipes sideways through whatever list you opened it from, double-taps to zoom, and turns what Deja pulled out into something you can act on — call a number, message it, save it as a contact, open a link, or find every other screenshot that mentions the same value. ID and card numbers are masked until tapped. The OCR text is selectable. |
+| Keep | Star a screenshot and it is excluded from every automatic Clean up group, kept as the surviving copy when duplicates are collapsed, filterable as its own bucket, and one tap from the top of the timeline. |
 | Clean up | Six automatic groups plus your own picks, each expandable to choose individual screenshots rather than all-or-nothing. Two ways to remove them: `MediaStore.createTrashRequest` (recoverable from the gallery's trash) or `MediaStore.createDeleteRequest` (gone immediately, no undo) — both confirmed in a system dialog Deja cannot bypass. |
 | Privacy | The permission story, what is indexed, and guarded controls to stop a scan, re-read, or wipe the index. |
 | Browse | Every category and every app as a readable vertical list with counts. The timeline's chip row only ever shows what fits, and the list grows as a scan runs, so this is where the whole thing lives. Picking anything drops you back on the timeline already filtered. |
@@ -111,12 +112,27 @@ Android 14's "Select photos" is treated as a supported state rather than a broke
 declares `READ_MEDIA_VISUAL_USER_SELECTED`, indexes whatever was picked, and offers a way to pick
 more from both the timeline and the privacy screen.
 
-### Upgrading from an earlier build
+### What is stored on the device
 
-The schema changed (source app, search blob), and the database is set to
-`fallbackToDestructiveMigration`. **The existing index is dropped on first launch and every
-screenshot is read again.** That is deliberate — the index is derived data that can always be
-rebuilt from the screenshots themselves, so it is cheaper than shipping migrations for it.
+The index, and the last eight searches that found something. Both live in Deja's private
+storage, neither can leave the phone, and **"Delete everything Deja knows" on the privacy screen
+clears both** — a control that left search history behind would be a lie.
+
+### Keeping a screenshot, and why the database now migrates
+
+Starring a screenshot takes it out of every automatic Clean up group, makes it the copy that
+survives when duplicates are collapsed, gives it its own filter, and puts it on a shelf at the
+top of the timeline. It is the thing that makes a bulk-delete screen safe enough to use without
+reading every tile first.
+
+It also ends the destructive-migration shortcut. Earlier schema changes dropped the index and
+re-read everything, on the argument that an index is derived data. That argument holds right up
+until a column records a decision: pinning is something the user did, and no amount of re-reading
+screenshots recovers it. **v2 → v3 ships a real `Migration`** and the index survives the upgrade.
+Every schema change from here on does the same.
+
+The FTS table needs nothing. Its triggers fire on the `shots` table and copy `searchBlob` across;
+adding a column beside it leaves both the column and the triggers intact.
 
 ## Project layout
 
@@ -134,8 +150,10 @@ app/src/main/java/com/layerbit/deja/
     ShotRepository Search ranking, cleanup grouping, trash requests
   ui/
     theme/         Palette and type from the design canvas
-    components/    Bottom bar, headers, and the MediaStore-backed thumbnail loader
-    timeline/ search/ detail/ cleanup/ privacy/ onboarding/
+    components/    Bottom bar, headers, Motion (press/haptics/counters/shimmer), and the
+                   MediaStore-backed thumbnail loader
+    detail/        DetailScreen, EntityActions (what a found value can do), DetailContext
+    timeline/ search/ browse/ cleanup/ privacy/ about/ onboarding/
 ```
 
 Screen designs and a clickable prototype live in the `deja-design/` folder of the

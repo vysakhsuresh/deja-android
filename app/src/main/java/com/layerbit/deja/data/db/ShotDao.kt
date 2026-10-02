@@ -68,6 +68,18 @@ interface ShotDao {
     @Query("SELECT * FROM shots WHERE id = :id")
     suspend fun byId(id: Long): ShotEntity?
 
+    @Query("UPDATE shots SET pinned = :pinned WHERE id = :id")
+    suspend fun setPinned(id: Long, pinned: Boolean)
+
+    @Query("UPDATE shots SET pinned = :pinned WHERE id IN (:ids)")
+    suspend fun setPinnedAll(ids: List<Long>, pinned: Boolean)
+
+    @Query("SELECT * FROM shots WHERE pinned = 1 ORDER BY dateTakenMillis DESC LIMIT :limit")
+    fun observePinned(limit: Int): Flow<List<ShotEntity>>
+
+    @Query("SELECT COUNT(*) FROM shots WHERE pinned = 1")
+    fun observePinnedCount(): Flow<Int>
+
     /**
      * Room maps the FTS rowid onto [ShotEntity.id], so the join is what carries the match back to
      * the full row. The caller is responsible for turning a typed query into FTS MATCH syntax.
@@ -83,29 +95,47 @@ interface ShotDao {
     )
     suspend fun search(match: String, limit: Int): List<ShotEntity>
 
-    @Query("SELECT * FROM shots WHERE category = :category AND dateTakenMillis < :before ORDER BY dateTakenMillis DESC")
+    @Query(
+        """
+        SELECT * FROM shots WHERE pinned = 0 AND category = :category AND dateTakenMillis < :before
+        ORDER BY dateTakenMillis DESC
+        """
+    )
     suspend fun olderThanInCategory(category: String, before: Long): List<ShotEntity>
 
     @Query(
         """
-        SELECT * FROM shots WHERE category IN (:categories) AND dateTakenMillis < :before
+        SELECT * FROM shots
+        WHERE pinned = 0 AND category IN (:categories) AND dateTakenMillis < :before
         ORDER BY dateTakenMillis DESC
         """
     )
     suspend fun olderThanInCategories(categories: List<String>, before: Long): List<ShotEntity>
 
-    @Query("SELECT * FROM shots WHERE dateTakenMillis < :before ORDER BY dateTakenMillis DESC")
+    @Query(
+        """
+        SELECT * FROM shots WHERE pinned = 0 AND dateTakenMillis < :before
+        ORDER BY dateTakenMillis DESC
+        """
+    )
     suspend fun olderThan(before: Long): List<ShotEntity>
 
-    @Query("SELECT * FROM shots WHERE sizeBytes >= :minBytes ORDER BY sizeBytes DESC")
+    @Query("SELECT * FROM shots WHERE pinned = 0 AND sizeBytes >= :minBytes ORDER BY sizeBytes DESC")
     suspend fun largerThan(minBytes: Long): List<ShotEntity>
 
-    @Query("SELECT * FROM shots WHERE length(text) < :minChars ORDER BY dateTakenMillis DESC")
+    @Query(
+        """
+        SELECT * FROM shots WHERE pinned = 0 AND length(text) < :minChars
+        ORDER BY dateTakenMillis DESC
+        """
+    )
     suspend fun withLittleText(minChars: Int): List<ShotEntity>
 
     /**
      * Every row whose text and byte size both match at least one other row. Choosing which copy to
-     * keep is the repository's job.
+     * keep is the repository's job - which is also why pinned rows stay in the result here rather
+     * than being filtered out in SQL: a pinned copy has to be visible to the "which one do we
+     * keep" decision before it is dropped from what gets offered.
      */
     @Query(
         """

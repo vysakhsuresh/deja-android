@@ -39,6 +39,16 @@ class ShotRepository(private val context: Context) {
 
     suspend fun byId(id: Long): ShotEntity? = dao.byId(id)
 
+    fun observePinned(limit: Int = 200): Flow<List<ShotEntity>> = dao.observePinned(limit)
+
+    fun observePinnedCount(): Flow<Int> = dao.observePinnedCount()
+
+    suspend fun setPinned(id: Long, pinned: Boolean) = dao.setPinned(id, pinned)
+
+    suspend fun setPinned(ids: Collection<Long>, pinned: Boolean) {
+        if (ids.isNotEmpty()) dao.setPinnedAll(ids.toList(), pinned)
+    }
+
     /**
      * FTS gives recall, this gives order: a screenshot matching every term the user typed beats
      * one matching a single common word, and only then does recency break the tie.
@@ -128,13 +138,27 @@ class ShotRepository(private val context: Context) {
         ).filter { it.shots.isNotEmpty() }
     }
 
-    /** Every copy except the newest of each identical group. */
+    /**
+     * Every copy except the one worth keeping out of each identical group.
+     *
+     * A pinned copy is what gets kept when there is one, and no pinned copy is ever offered for
+     * deletion even if a newer twin exists - otherwise pinning a screenshot would silently fail
+     * to protect it the moment someone screenshotted the same thing twice.
+     */
     private suspend fun redundantDuplicates(): List<ShotEntity> =
         dao.duplicateCandidates()
             .groupBy { it.textHash to it.sizeBytes }
             .values
             .filter { it.size > 1 }
-            .flatMap { group -> group.sortedByDescending { it.dateTakenMillis }.drop(1) }
+            .flatMap { group ->
+                group
+                    .sortedWith(
+                        compareByDescending<ShotEntity> { it.pinned }
+                            .thenByDescending { it.dateTakenMillis }
+                    )
+                    .drop(1)
+                    .filterNot { it.pinned }
+            }
 
     /**
      * Moves screenshots to the system trash, where they stay recoverable, rather than deleting

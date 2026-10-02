@@ -1,7 +1,6 @@
 package com.layerbit.deja.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,7 +57,7 @@ fun ScreenHeader(
             Box(
                 modifier = Modifier
                     .size(TapTarget)
-                    .clickable(onClick = onBack),
+                    .tappable(onClick = onBack),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -120,7 +119,7 @@ fun DejaBottomBar(current: Tab, onSelect: (Tab) -> Unit) {
                     modifier = Modifier
                         .weight(1f)
                         .height(TapTarget + 8.dp)
-                        .clickable { onSelect(tab) },
+                        .tappable { onSelect(tab) },
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -149,7 +148,7 @@ fun SettingsButton(onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(TapTarget)
-            .clickable(onClick = onClick),
+            .tappable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -229,7 +228,7 @@ fun ActionRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(15.dp))
             .background(DejaColors.SurfaceDim)
-            .clickable(onClick = onClick)
+            .tappable(onClick = onClick)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

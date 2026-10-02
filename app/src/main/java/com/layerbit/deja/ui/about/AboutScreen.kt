@@ -2,7 +2,6 @@ package com.layerbit.deja.ui.about
 
 import android.app.Application
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +44,7 @@ import com.layerbit.deja.ui.components.ScreenHeader
 import com.layerbit.deja.ui.components.SectionLabel
 import com.layerbit.deja.ui.components.Tab
 import com.layerbit.deja.ui.components.formatBytes
+import com.layerbit.deja.ui.components.tappable
 import com.layerbit.deja.ui.theme.DejaColors
 import java.time.Instant
 import java.time.ZoneId
@@ -72,6 +72,9 @@ class AboutViewModel(app: Application) : AndroidViewModel(app) {
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val pinnedCount = repository.observePinnedCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
     val topApps = repository.observeAppCounts(5)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 }
@@ -86,6 +89,7 @@ fun AboutScreen(
     val stats by viewModel.stats.collectAsState()
     val topCategories by viewModel.topCategories.collectAsState()
     val topApps by viewModel.topApps.collectAsState()
+    val pinnedCount by viewModel.pinnedCount.collectAsState()
     var showHelp by remember { mutableStateOf(false) }
 
     // Same two routes LayerLink offers, so getting help from any Layerbit app feels the same.
@@ -157,6 +161,17 @@ fun AboutScreen(
                     label = "oldest one",
                     modifier = Modifier.weight(1f)
                 )
+            }
+            if (pinnedCount > 0) {
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StatTile("$pinnedCount", "kept for good", Modifier.weight(1f))
+                    StatTile(
+                        value = if (stats.newestMillis == 0L) "—" else stats.newestMillis.asMonth(),
+                        label = "most recent",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
             if (topCategories.isNotEmpty() && stats.total > 0) {
@@ -245,7 +260,7 @@ fun AboutScreen(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .clickable { BrandLinks.openUrl(context, BrandLinks.WEBSITE_URL) }
+                        .tappable { BrandLinks.openUrl(context, BrandLinks.WEBSITE_URL) }
                         .padding(vertical = 6.dp, horizontal = 2.dp)
                 )
             }

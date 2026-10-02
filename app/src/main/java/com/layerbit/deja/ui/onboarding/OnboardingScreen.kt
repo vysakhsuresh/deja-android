@@ -1,7 +1,6 @@
 package com.layerbit.deja.ui.onboarding
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.layerbit.deja.ui.components.TapTarget
+import com.layerbit.deja.ui.components.tappable
 import com.layerbit.deja.ui.theme.DejaColors
 
 /**
@@ -136,7 +136,7 @@ private fun PrimaryButton(label: String, onClick: () -> Unit) {
             .height(TapTarget + 6.dp)
             .clip(RoundedCornerShape(15.dp))
             .background(DejaColors.Amber)
-            .clickable(onClick = onClick),
+            .tappable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(

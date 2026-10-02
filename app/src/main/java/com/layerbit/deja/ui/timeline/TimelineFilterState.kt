@@ -8,12 +8,14 @@ import kotlinx.coroutines.flow.asStateFlow
 /** What the grid is narrowed to. Category and app are mutually exclusive by design. */
 sealed interface TimelineFilter {
     data object All : TimelineFilter
+    data object Pinned : TimelineFilter
     data class OfCategory(val category: Category) : TimelineFilter
     data class FromApp(val app: String) : TimelineFilter
 
     val label: String
         get() = when (this) {
             is All -> "All screenshots"
+            is Pinned -> "Kept"
             is OfCategory -> category.label
             is FromApp -> app
         }
@@ -44,6 +46,11 @@ object TimelineFilterState {
             current is TimelineFilter.OfCategory && current.category == category -> TimelineFilter.All
             else -> TimelineFilter.OfCategory(category)
         }
+    }
+
+    fun togglePinned() {
+        _filter.value =
+            if (_filter.value is TimelineFilter.Pinned) TimelineFilter.All else TimelineFilter.Pinned
     }
 
     fun toggleApp(app: String) {
