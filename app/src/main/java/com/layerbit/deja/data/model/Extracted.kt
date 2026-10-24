@@ -25,6 +25,8 @@ enum class EntityType(val id: String, val label: String, val sensitive: Boolean 
     AMOUNT("amount", "Amount"),
     DATE("date", "Date"),
     BOOKING_REF("booking_ref", "Booking ref"),
+    FLIGHT("flight", "Flight"),
+    TIME("time", "Time"),
     VEHICLE("vehicle", "Vehicle number"),
     PHONE("phone", "Phone"),
     EMAIL("email", "Email"),

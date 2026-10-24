@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 data class CategoryCount(val category: String, val count: Int)
@@ -21,8 +22,18 @@ data class LibraryStats(
 @Dao
 interface ShotDao {
 
+    /**
+     * Room wraps a list insert in one transaction, which is the entire point of it here. The
+     * first engine committed once per screenshot: four thousand separate transactions, each
+     * paying for the FTS triggers and a flush to disk. Writing in batches turns that into a
+     * couple of hundred.
+     */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(shot: ShotEntity)
+    suspend fun upsertAll(shots: List<ShotEntity>)
+
+    /** Used by the re-read and re-derive passes, which already hold the whole row. */
+    @Update
+    suspend fun updateAll(shots: List<ShotEntity>)
 
     @Query("SELECT mediaId FROM shots")
     suspend fun indexedMediaIds(): List<Long>
@@ -68,6 +79,50 @@ interface ShotDao {
     @Query("SELECT * FROM shots WHERE id = :id")
     suspend fun byId(id: Long): ShotEntity?
 
+    // --- Engine upkeep -------------------------------------------------------------------
+    //
+    // Rows carry the engine version that produced them, so an improved engine can find exactly
+    // the work it needs to redo. Re-derives are ordered oldest-stamp-first and re-reads
+    // newest-screenshot-first: a backfill should reach the screenshots someone took last week
+    // before the ones from two years ago.
+
+    @Query("SELECT COUNT(*) FROM shots WHERE readVersion < :version AND readAttempts < :maxAttempts")
+    suspend fun staleReadCount(version: Int, maxAttempts: Int): Int
+
+    @Query(
+        """
+        SELECT * FROM shots
+        WHERE readVersion < :version AND readAttempts < :maxAttempts
+        ORDER BY dateTakenMillis DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun staleReads(version: Int, maxAttempts: Int, limit: Int): List<ShotEntity>
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM shots
+        WHERE deriveVersion < :deriveVersion AND readVersion >= :readVersion
+        """
+    )
+    suspend fun staleDeriveCount(deriveVersion: Int, readVersion: Int): Int
+
+    /**
+     * Only rows whose text is already current. A row waiting to be re-read would be derived
+     * twice otherwise - once from the old text and again from the new - for no benefit.
+     */
+    @Query(
+        """
+        SELECT * FROM shots
+        WHERE deriveVersion < :deriveVersion AND readVersion >= :readVersion
+        LIMIT :limit
+        """
+    )
+    suspend fun staleDerives(deriveVersion: Int, readVersion: Int, limit: Int): List<ShotEntity>
+
+    @Query("SELECT * FROM shots WHERE phash <> 0 ORDER BY dateTakenMillis DESC LIMIT :limit")
+    suspend fun hashed(limit: Int): List<ShotEntity>
+
     @Query("UPDATE shots SET pinned = :pinned WHERE id = :id")
     suspend fun setPinned(id: Long, pinned: Boolean)
 
@@ -89,11 +144,24 @@ interface ShotDao {
         SELECT shots.* FROM shots
         JOIN shots_fts ON shots.id = shots_fts.rowid
         WHERE shots_fts MATCH :match
+          AND shots.dateTakenMillis BETWEEN :from AND :to
         ORDER BY shots.dateTakenMillis DESC
         LIMIT :limit
         """
     )
-    suspend fun search(match: String, limit: Int): List<ShotEntity>
+    suspend fun search(match: String, from: Long, to: Long, limit: Int): List<ShotEntity>
+
+    /**
+     * For a query that is nothing but a date - "last week" on its own is a perfectly good thing
+     * to ask a screenshot app, and there is no text in it to match against.
+     */
+    @Query(
+        """
+        SELECT * FROM shots WHERE dateTakenMillis BETWEEN :from AND :to
+        ORDER BY dateTakenMillis DESC LIMIT :limit
+        """
+    )
+    suspend fun inRange(from: Long, to: Long, limit: Int): List<ShotEntity>
 
     @Query(
         """

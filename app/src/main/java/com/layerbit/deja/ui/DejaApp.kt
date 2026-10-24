@@ -150,7 +150,13 @@ private fun ScanGate() {
                 askResume = true
             }
 
-            prefs.isUpToDate(generation) && app.repository.count() > 0 -> Unit
+            // Unchanged library *and* nothing the engine has since learned how to do
+            // better. The second half matters after an update: the version counter would
+            // otherwise report "nothing to do" and the improvement would never be applied.
+            prefs.isUpToDate(generation) &&
+                app.repository.count() > 0 &&
+                app.repository.engineBacklog() == 0 -> Unit
+
             else -> IndexWorker.enqueue(context)
         }
     }

@@ -4,7 +4,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class ScanPhase { IDLE, SCANNING, READING, FINISHED, STOPPED }
+enum class ScanPhase {
+    IDLE,
+    SCANNING,
+    READING,
+
+    /**
+     * Bringing rows an older engine produced up to the current one - re-deciding categories from
+     * text already held, or re-reading images the engine has since learned more from.
+     *
+     * Its own phase because it is not the same promise as READING. Nothing is missing from the
+     * index while this runs; everything in it is searchable and filterable, it is just about to
+     * get better. The UI says so rather than implying the library is incomplete.
+     */
+    REFRESHING,
+    FINISHED,
+    STOPPED
+}
 
 /**
  * @param done how many of the screenshots on the device are in the index right now.
@@ -19,7 +35,13 @@ data class IndexProgress(
     val done: Int = 0,
     val total: Int = 0
 ) {
-    val running: Boolean get() = phase == ScanPhase.SCANNING || phase == ScanPhase.READING
+    val running: Boolean
+        get() = phase == ScanPhase.SCANNING ||
+            phase == ScanPhase.READING ||
+            phase == ScanPhase.REFRESHING
+
+    /** True while the work underway is improving what is already there, not adding to it. */
+    val upgrading: Boolean get() = phase == ScanPhase.REFRESHING
     val remaining: Int get() = (total - done).coerceAtLeast(0)
     val fraction: Float get() = if (total <= 0) 0f else (done.toFloat() / total).coerceIn(0f, 1f)
 }
@@ -56,6 +78,15 @@ object IndexingState {
 
     fun reading(done: Int, total: Int) {
         _progress.value = IndexProgress(ScanPhase.READING, done, total)
+    }
+
+    /**
+     * Counts against the backlog being upgraded rather than the whole library, because that is
+     * the honest number: "412 of 2,104 brought up to date" means something, where "412 of 4,000
+     * screenshots" would imply the other 3,588 are missing.
+     */
+    fun refreshing(done: Int, total: Int) {
+        _progress.value = IndexProgress(ScanPhase.REFRESHING, done, total)
     }
 
     fun advance(done: Int) {

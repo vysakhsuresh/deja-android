@@ -7,18 +7,23 @@ import com.layerbit.deja.data.model.Extracted
 /**
  * Decides which bucket a screenshot belongs in.
  *
- * Three signals, weighted rather than chained, because no single one is reliable on its own:
+ * Four signals, weighted rather than chained, because no single one is reliable on its own:
  *
- *  - **What app it came from** (from the filename). The strongest signal by far, and free - but
- *    absent on Pixel and stock builds, so it can never decide alone.
+ *  - **What app it came from**, resolved from the filename or, when the filename says nothing,
+ *    from the app bar printed at the top of the screenshot itself.
  *  - **What was extracted from it.** A PAN number means an ID document no matter what else the
  *    OCR picked up; a PNR means travel.
- *  - **Words in the text**, split into strong terms that mean one thing ("boarding pass") and
- *    ordinary ones that only count alongside others ("total").
+ *  - **The headline** - the app bar and screen title. A screen whose own title is "Boarding
+ *    pass" is not ambiguous, so words found up there count for considerably more than the same
+ *    words found halfway down a page. This is new, and it is the single biggest accuracy gain
+ *    available, because a title is written by a designer to say what the screen is.
+ *  - **Words in the body text**, split into strong terms that mean one thing ("boarding pass")
+ *    and ordinary ones that only count alongside others ("total").
  *
- * The earlier version demanded two keyword hits and dropped everything else into OTHER, which put
- * most of a real library there. Scoring fixes that: a WhatsApp screenshot is a conversation even
- * when the OCR read almost nothing, and an OTP inside it still outranks the app it came from.
+ * The earliest version demanded two keyword hits and dropped everything else into OTHER, which
+ * put most of a real library there. Scoring fixes that: a WhatsApp screenshot is a conversation
+ * even when the OCR read almost nothing, and an OTP inside it still outranks the app it came
+ * from.
  */
 object Classifier {
 
@@ -26,6 +31,14 @@ object Classifier {
     private const val STRONG_WORD = 3.0
     private const val WEAK_WORD = 1.2
     private const val MIN_SCORE = 2.0
+
+    /**
+     * How much more a word in the title is worth than the same word in the body.
+     *
+     * Deliberately large. "Total" in the middle of a chat is noise; "Total" as the heading of
+     * the screen is a receipt.
+     */
+    private const val HEADLINE_MULTIPLIER = 1.8
 
     /** Terms that mean one category and nothing else. */
     private val strong: Map<Category, List<String>> = mapOf(
@@ -117,24 +130,48 @@ object Classifier {
         EntityType.GSTIN to (Category.RECEIPT to 3.0),
         EntityType.UPI_ID to (Category.RECEIPT to 3.0),
         EntityType.BOOKING_REF to (Category.TICKET to 5.0),
+        EntityType.FLIGHT to (Category.TICKET to 5.0),
         EntityType.AMOUNT to (Category.RECEIPT to 1.2),
         EntityType.PHONE to (Category.CONTACT to 1.5),
         EntityType.EMAIL to (Category.CONTACT to 1.2),
         EntityType.HANDLE to (Category.SOCIAL to 1.0)
     )
 
-    fun classify(text: String, displayName: String, entities: List<Extracted>): Category {
+    /**
+     * @param sourceApp the app already resolved by [Derivation], from the filename or the
+     *   headline. Passed in rather than re-derived so the two cannot disagree about which app a
+     *   screenshot came from.
+     * @param headline the app bar and screen title, or empty for a row read by an engine version
+     *   that did not capture line positions. Empty simply means this signal contributes nothing,
+     *   which is exactly the old behaviour.
+     */
+    fun classify(
+        text: String,
+        headline: String,
+        sourceApp: String,
+        entities: List<Extracted>
+    ): Category {
         val scores = mutableMapOf<Category, Double>()
         fun add(category: Category, amount: Double) {
             scores[category] = (scores[category] ?: 0.0) + amount
         }
 
-        SourceApp.categoryHint(displayName)
+        SourceApp.categoryForDisplay(sourceApp)
             ?.takeIf { it != Category.OTHER }
             ?.let { add(it, APP_HINT) }
 
         entities.forEach { entity ->
             entitySignals[entity.type]?.let { (category, weight) -> add(category, weight) }
+        }
+
+        if (headline.isNotBlank()) {
+            val title = headline.lowercase()
+            strong.forEach { (category, words) ->
+                add(category, STRONG_WORD * HEADLINE_MULTIPLIER * words.count { title.contains(it) })
+            }
+            weak.forEach { (category, words) ->
+                add(category, WEAK_WORD * HEADLINE_MULTIPLIER * words.count { title.contains(it) })
+            }
         }
 
         if (text.isNotBlank()) {

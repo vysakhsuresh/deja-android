@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ShotEntity::class, ShotFts::class],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class DejaDatabase : RoomDatabase() {
@@ -37,6 +37,28 @@ abstract class DejaDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Adds the engine's own bookkeeping: line geometry, a perceptual hash, the headline, and
+         * the two version stamps that let a later engine bring old rows forward.
+         *
+         * Both version columns default to 0, which is behind every shipping engine version, so
+         * every existing row is marked stale the moment this runs. That is the intent, and it is
+         * not a wipe: nothing is deleted, nothing is emptied, and the index stays completely
+         * usable - searchable, filterable, with pins intact - while the worker re-reads in the
+         * background, newest screenshots first, a few hundred per run. The old text keeps
+         * answering searches right up until better text replaces it.
+         */
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE shots ADD COLUMN headline TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE shots ADD COLUMN linesBlob TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE shots ADD COLUMN phash INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE shots ADD COLUMN readVersion INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE shots ADD COLUMN deriveVersion INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE shots ADD COLUMN readAttempts INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         @Volatile
         private var instance: DejaDatabase? = null
 
@@ -47,7 +69,7 @@ abstract class DejaDatabase : RoomDatabase() {
                     DejaDatabase::class.java,
                     "deja.db"
                 )
-                    .addMigrations(MIGRATION_2_3)
+                    .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
                     // Only reached from a schema version with no path to this one - an install
                     // from a build that never shipped. Rebuilding the index then is the correct
                     // outcome; for every version Deja has actually released there is a migration

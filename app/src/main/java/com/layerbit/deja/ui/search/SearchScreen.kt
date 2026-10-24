@@ -83,7 +83,7 @@ import kotlinx.coroutines.flow.stateIn
  * placeholder text does.
  */
 private val suggestions = listOf(
-    "otp", "wifi password", "receipt", "boarding pass", "aadhaar", "amount", "booking"
+    "otp", "wifi password", "receipt", "last week", "boarding pass", "aadhaar", "booking"
 )
 
 /**
@@ -162,7 +162,11 @@ fun SearchScreen(
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
-    val tokens = remember(query) { SearchQuery.tokenise(query) }
+    // The same plan the repository builds, re-derived here because it is pure and cheap, and
+    // because the UI needs two things out of it: what to highlight, and whether a span of time
+    // was understood - "last week" silently narrowing the results is worse than useless if the
+    // screen never admits it happened.
+    val plan = remember(query) { SearchQuery.plan(query) }
 
     LaunchedEffect(Unit) {
         val requested = SearchRequest.take()
@@ -240,6 +244,8 @@ fun SearchScreen(
 
         Spacer(Modifier.height(14.dp))
 
+        val scope = plan.window?.let { " in ${it.label}" }.orEmpty()
+
         if (query.isBlank()) {
             if (recent.isNotEmpty()) {
                 Row(
@@ -299,12 +305,12 @@ fun SearchScreen(
 
         Text(
             text = when {
-                query.isBlank() -> "Deja searches the words inside your screenshots, plus the app " +
-                    "each one came from."
+                query.isBlank() -> "Words inside your screenshots, the app each came from, and " +
+                    "when you took them — try \"receipt last week\"."
                 searching && results.isEmpty() -> "Looking…"
-                results.isEmpty() -> "No matches on this device."
-                results.size == 1 -> "1 match · searched on this device"
-                else -> "${results.size} matches · searched on this device"
+                results.isEmpty() -> "No matches on this device$scope."
+                results.size == 1 -> "1 match$scope · searched on this device"
+                else -> "${results.size} matches$scope · searched on this device"
             },
             color = DejaColors.Dim,
             fontSize = 12.5.sp,
@@ -322,7 +328,7 @@ fun SearchScreen(
             items(results, key = { it.id }) { shot ->
                 ResultCard(
                     shot = shot,
-                    tokens = tokens,
+                    tokens = plan.highlight,
                     onClick = {
                         // Swiping sideways in the detail view should walk the results, not the
                         // timeline you happened to open search from.

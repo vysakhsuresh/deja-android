@@ -9,6 +9,10 @@ import com.layerbit.deja.data.db.CategoryCount
 import com.layerbit.deja.data.db.DejaDatabase
 import com.layerbit.deja.data.db.LibraryStats
 import com.layerbit.deja.data.db.ShotEntity
+import com.layerbit.deja.data.index.EngineVersion
+import com.layerbit.deja.data.index.PerceptualHash
+import com.layerbit.deja.data.index.Ranker
+import com.layerbit.deja.data.index.SearchPlan
 import com.layerbit.deja.data.index.SearchQuery
 import com.layerbit.deja.data.model.Category
 import com.layerbit.deja.data.model.CleanupGroup
@@ -50,21 +54,57 @@ class ShotRepository(private val context: Context) {
     }
 
     /**
-     * FTS gives recall, this gives order: a screenshot matching every term the user typed beats
-     * one matching a single common word, and only then does recency break the tie.
+     * How much work the engine still owes the library, in rows. Non-zero after an update that
+     * knows more than the one that wrote the index.
      */
-    suspend fun search(raw: String): List<ShotEntity> {
-        val match = SearchQuery.toMatch(raw) ?: return emptyList()
-        val tokens = SearchQuery.tokenise(raw)
-        val candidates = runCatching { dao.search(match, CANDIDATE_LIMIT) }.getOrDefault(emptyList())
+    suspend fun engineBacklog(): Int =
+        dao.staleReadCount(EngineVersion.READ, EngineVersion.MAX_READ_ATTEMPTS) +
+            dao.staleDeriveCount(EngineVersion.DERIVE, EngineVersion.READ)
 
-        return candidates
-            .sortedWith(
-                compareByDescending<ShotEntity> { shot ->
-                    val haystack = shot.searchBlob.lowercase()
-                    tokens.count { haystack.contains(it) }
-                }.thenByDescending { it.dateTakenMillis }
-            )
+    suspend fun search(raw: String): List<ShotEntity> = search(SearchQuery.plan(raw))
+
+    /**
+     * Precision first, recall second.
+     *
+     * The strict pass requires every word typed. That is the right answer whenever it finds
+     * anything at all - "swiggy receipt" means the screenshot that is both, not the union of two
+     * piles. Only when it comes back thin is the net widened to anything-matches, with the known
+     * spelling variants thrown in, and the strict hits stay ahead of the loose ones because
+     * [Ranker] rewards completeness far more than it rewards a single term.
+     *
+     * A query that is nothing but a date skips matching entirely: "last week" has no words to
+     * find and does not need any.
+     */
+    suspend fun search(plan: SearchPlan): List<ShotEntity> {
+        if (plan.isEmpty) return emptyList()
+
+        val from = plan.window?.from ?: 0L
+        val to = plan.window?.to ?: Long.MAX_VALUE
+
+        if (plan.dateOnly) {
+            val inWindow = runCatching { dao.inRange(from, to, RESULT_LIMIT) }
+                .getOrDefault(emptyList())
+            return Ranker.excludeRejects(inWindow, plan)
+        }
+
+        val strict = plan.strictMatch()
+            ?.let { match -> runCatching { dao.search(match, from, to, CANDIDATE_LIMIT) }
+                .getOrDefault(emptyList()) }
+            .orEmpty()
+
+        val candidates = if (strict.size >= ENOUGH) {
+            strict
+        } else {
+            val loose = plan.looseMatch()
+                ?.let { match -> runCatching { dao.search(match, from, to, CANDIDATE_LIMIT) }
+                    .getOrDefault(emptyList()) }
+                .orEmpty()
+            // Distinct by id, strict first, so a row found both ways is kept once.
+            (strict + loose).distinctBy { it.id }
+        }
+
+        return Ranker
+            .rank(Ranker.excludeRejects(candidates, plan), plan, System.currentTimeMillis())
             .take(RESULT_LIMIT)
     }
 
@@ -88,6 +128,7 @@ class ShotRepository(private val context: Context) {
             )
         )
         val duplicates = claim(redundantDuplicates())
+        val nearDuplicates = claim(nearIdentical())
         val unreadable = claim(dao.withLittleText(MIN_USEFUL_TEXT))
         val ancient = claim(dao.olderThan(now - TimeUnit.DAYS.toMillis(365)))
         val large = claim(dao.largerThan(LARGE_BYTES))
@@ -112,6 +153,13 @@ class ShotRepository(private val context: Context) {
                 title = "Exact duplicates",
                 subtitle = "Same contents and size, newest copy kept",
                 shots = duplicates,
+                selectedByDefault = false
+            ),
+            CleanupGroup(
+                id = "near_duplicates",
+                title = "Near-identical shots",
+                subtitle = "The same screen captured more than once",
+                shots = nearDuplicates,
                 selectedByDefault = false
             ),
             CleanupGroup(
@@ -161,6 +209,76 @@ class ShotRepository(private val context: Context) {
             }
 
     /**
+     * Screenshots that look the same but are not the same file.
+     *
+     * Exact matching catches a file copied verbatim and nothing else. What people actually
+     * accumulate is the same screen captured twice seconds apart, or one image re-saved through
+     * a share sheet - visually identical, different in every byte, and invisible to a hash of
+     * the text.
+     *
+     * Two things have to agree before anything is offered up. The images have to look alike,
+     * which a perceptual hash answers, and they have to say roughly the same thing, which a
+     * token overlap answers. The second test is not belt and braces: pages of dark text on white
+     * are the bulk of a screenshot library and they can land close together in dHash space
+     * without being remotely related. Requiring both means a false positive needs two unlikely
+     * things at once.
+     *
+     * The copy kept is pinned if any is, then the largest, then the newest - largest because
+     * between two captures of one screen the bigger file is usually the less compressed.
+     */
+    private suspend fun nearIdentical(): List<ShotEntity> {
+        val rows = dao.hashed(NEAR_DUP_SCAN)
+        if (rows.size < 2) return emptyList()
+
+        val tokens = arrayOfNulls<Set<String>>(rows.size)
+        fun tokensAt(index: Int): Set<String> =
+            tokens[index] ?: tokenSet(rows[index].text).also { tokens[index] = it }
+
+        val taken = BooleanArray(rows.size)
+        val drop = mutableListOf<ShotEntity>()
+
+        for (i in rows.indices) {
+            if (taken[i]) continue
+            val group = mutableListOf(rows[i])
+            for (j in i + 1 until rows.size) {
+                if (taken[j]) continue
+                if (PerceptualHash.distance(rows[i].phash, rows[j].phash) > NEAR_DUP_BITS) continue
+                if (overlap(tokensAt(i), tokensAt(j)) < NEAR_DUP_OVERLAP) continue
+                group += rows[j]
+                taken[j] = true
+            }
+            taken[i] = true
+            if (group.size < 2) continue
+
+            drop += group
+                .sortedWith(
+                    compareByDescending<ShotEntity> { it.pinned }
+                        .thenByDescending { it.sizeBytes }
+                        .thenByDescending { it.dateTakenMillis }
+                )
+                .drop(1)
+                .filterNot { it.pinned }
+        }
+        return drop
+    }
+
+    private fun tokenSet(text: String): Set<String> =
+        text.lowercase()
+            .split(Regex("[^\\p{L}\\p{N}]+"))
+            .asSequence()
+            .filter { it.length >= 3 }
+            .take(TOKENS_PER_SHOT)
+            .toSet()
+
+    /** Jaccard. Two empty texts overlap perfectly, which is correct and also harmless here. */
+    private fun overlap(a: Set<String>, b: Set<String>): Double {
+        if (a.isEmpty() && b.isEmpty()) return 1.0
+        val union = a.size + b.size - a.count { it in b }
+        if (union <= 0) return 0.0
+        return a.count { it in b }.toDouble() / union
+    }
+
+    /**
      * Moves screenshots to the system trash, where they stay recoverable, rather than deleting
      * them outright. The user confirms in a system dialog that Deja cannot bypass.
      */
@@ -183,6 +301,15 @@ class ShotRepository(private val context: Context) {
     private companion object {
         const val CANDIDATE_LIMIT = 400
         const val RESULT_LIMIT = 80
+
+        /** Below this, the strict pass is treated as too thin to be the whole answer. */
+        const val ENOUGH = 8
+
+        /** Out of 64 bits. Six is tight enough that the images are the same screen. */
+        const val NEAR_DUP_BITS = 6
+        const val NEAR_DUP_OVERLAP = 0.6
+        const val NEAR_DUP_SCAN = 4000
+        const val TOKENS_PER_SHOT = 200
 
         /** Below this many characters there is nothing to search for or act on. */
         const val MIN_USEFUL_TEXT = 12

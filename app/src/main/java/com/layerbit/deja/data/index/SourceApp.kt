@@ -140,4 +140,35 @@ object SourceApp {
         }
         return null
     }
+
+    /**
+     * The app a screenshot is *of*, read off the app bar at the top of the picture.
+     *
+     * This is the answer to the hole in the filename approach. Pixel and stock Android write
+     * nothing but a timestamp, so for those users the whole "Apps" list in Browse was empty and
+     * the strongest classification signal simply did not exist. The app's own name is usually
+     * printed right there at the top of the screenshot.
+     *
+     * Only ever given the headline, never the body text. "Maps" or "Messages" appearing in the
+     * middle of a conversation means nothing; the same word in the app bar is the app. Matching
+     * against the display names rather than the package fragments for the same reason - nobody's
+     * screen says "com.google.android.apps.maps".
+     */
+    fun detectInText(headline: String): String? {
+        if (headline.isBlank()) return null
+        val lower = headline.lowercase()
+        table.forEach { (_, known) ->
+            val name = known.display.lowercase()
+            if (name.length >= 3 && lower.contains(name)) return known.display
+        }
+        return null
+    }
+
+    /** What a resolved display name implies, so the caller does not re-parse the filename. */
+    fun categoryForDisplay(display: String): Category? {
+        if (display.isBlank()) return null
+        return table.firstOrNull { (_, known) -> known.display.equals(display, ignoreCase = true) }
+            ?.second
+            ?.category
+    }
 }

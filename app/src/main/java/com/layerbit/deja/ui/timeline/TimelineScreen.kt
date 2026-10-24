@@ -614,6 +614,7 @@ private fun ScanBanner(
                         text = when {
                             stopped -> "Scan unfinished"
                             progress.phase == ScanPhase.SCANNING -> "Looking for screenshots"
+                            progress.upgrading -> "Sharpening what Deja already read"
                             else -> "Reading your screenshots"
                         },
                         color = DejaColors.Text,
@@ -626,6 +627,17 @@ private fun ScanBanner(
                             text = if (stopped) "Pick up where Deja left off" else "Just a moment",
                             color = DejaColors.Muted,
                             fontSize = 12.5.sp
+                        )
+                    } else if (progress.upgrading) {
+                        // Nothing is missing while this runs, so the wording says improvement
+                        // rather than progress towards being complete.
+                        AnimatedCount(
+                            value = progress.done,
+                            color = DejaColors.Muted,
+                            fontSize = 12.5.sp,
+                            format = { done ->
+                                "$done of ${progress.total} re-read · everything stays searchable"
+                            }
                         )
                     } else {
                         // Counting up rather than jumping: the number climbing is the clearest
