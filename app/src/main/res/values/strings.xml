@@ -1,4 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Deja</string>
+
+    <!-- New-screenshot notification -->
+    <string name="notif_channel_name">New screenshots</string>
+    <string name="notif_channel_description">What Deja read in a screenshot you just took. Only when you switch it on.</string>
+    <string name="notif_title">Deja read this</string>
+    <string name="notif_public_body">A new screenshot was read</string>
+    <string name="notif_action_copy">Copy</string>
+    <string name="copied">Copied</string>
+    <string name="copy_gone">That screenshot is no longer in Deja</string>
+    <string name="entity_code">One-time code</string>
+    <string name="entity_wifi_password">Wi-Fi password</string>
+    <string name="entity_booking_ref">Booking ref</string>
+    <string name="entity_amount">Amount</string>
+
+    <!-- Share sheet -->
+    <string name="share_label">Read with Deja</string>
+    <plurals name="share_reading">
+        <item quantity="one">Reading the image you shared…</item>
+        <item quantity="other">Reading %d images you shared…</item>
+    </plurals>
+
+    <!-- Widgets -->
+    <string name="widget_kept_title">Kept</string>
+    <string name="widget_kept_empty">Star a screenshot in Deja to keep it here.</string>
+    <string name="widget_kept_item">Kept screenshot</string>
+    <string name="widget_kept_description">The screenshots you starred, one tap away</string>
+    <string name="widget_code_title">Latest code</string>
+    <string name="widget_code_empty">No one-time codes read yet.</string>
+    <string name="widget_code_description">The newest one-time code Deja read, with Copy</string>
+
+    <!-- Quick Settings tile -->
+    <string name="tile_label">Search screenshots</string>
 </resources>

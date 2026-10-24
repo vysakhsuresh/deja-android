@@ -4,6 +4,9 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.core.content.FileProvider
+import com.layerbit.deja.util.CrashLog
+import java.io.File
 
 /**
  * Company-wide links, the same destinations LayerLink's `core` module resolves through. Kept in
@@ -28,6 +31,38 @@ object BrandLinks {
         } catch (_: ActivityNotFoundException) {
             // Nothing on the device can open it - no browser, or WhatsApp not installed. There is
             // nothing sensible to fall back to, so do nothing rather than crash.
+        }
+    }
+
+    /**
+     * Email with the local crash log attached, if there is one. The log is copied to a folder
+     * that is the only thing Deja's FileProvider exposes, and read access is granted to the one
+     * app the user picks.
+     */
+    fun reportProblem(context: Context, subject: String, body: String) {
+        val log = CrashLog.file(context)
+        if (!CrashLog.hasEntries(context)) {
+            sendEmail(context, subject, body)
+            return
+        }
+        val dir = File(context.cacheDir, "reports").apply { mkdirs() }
+        val copy = File(dir, "deja-crash-log.txt")
+        log.copyTo(copy, overwrite = true)
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.reports", copy)
+
+        val send = Intent(Intent.ACTION_SEND).apply {
+            putExtra(Intent.EXTRA_EMAIL, arrayOf(SUPPORT_EMAIL))
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            putExtra(Intent.EXTRA_TEXT, body)
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            // Email apps only, not every app that accepts a file.
+            selector = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
+        }
+        try {
+            context.startActivity(send)
+        } catch (_: ActivityNotFoundException) {
+            sendEmail(context, subject, body)
         }
     }
 

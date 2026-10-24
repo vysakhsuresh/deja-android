@@ -12,12 +12,11 @@ import com.layerbit.deja.data.db.ShotDao
 import com.layerbit.deja.data.db.ShotEntity
 import com.layerbit.deja.data.model.ExtractedCodec
 import com.layerbit.deja.data.ocr.ReadResult
-import com.layerbit.deja.data.ocr.ReadScript
 import com.layerbit.deja.data.ocr.ScreenshotTextReader
 import com.layerbit.deja.data.scan.MediaGeneration
 import com.layerbit.deja.data.scan.MediaStoreScanner
 import com.layerbit.deja.data.scan.ScannedShot
-import java.security.MessageDigest
+import com.layerbit.deja.widget.Widgets
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -129,6 +128,7 @@ class IndexWorker(
             }
 
             IndexingState.finished()
+            Widgets.refresh(applicationContext)
             Result.success()
         } catch (error: Exception) {
             IndexingState.stopped()
@@ -202,7 +202,7 @@ class IndexWorker(
         batch: List<ScannedShot>
     ): List<ShotEntity> = coroutineScope {
         batch.map { shot ->
-            async { withReader(pool) { reader -> newRow(shot, reader.read(shot.uri)) } }
+            async { withReader(pool) { reader -> ShotRows.newRow(shot, reader.read(shot.uri)) } }
         }.awaitAll()
     }
 
@@ -230,37 +230,6 @@ class IndexWorker(
         }
     }
 
-    private fun newRow(shot: ScannedShot, result: ReadResult?): ShotEntity {
-        val text = result?.text.orEmpty()
-        val lines = result?.lines.orEmpty()
-        val codes = result?.codes.orEmpty()
-        val derived = Derivation.derive(shot.displayName, text, lines, codes)
-        return ShotEntity(
-            mediaId = shot.mediaId,
-            uri = shot.uri.toString(),
-            displayName = shot.displayName,
-            dateTakenMillis = shot.dateTakenMillis,
-            sizeBytes = shot.sizeBytes,
-            text = text,
-            textHash = if (text.isBlank()) "" else sha1(text),
-            category = derived.category.id,
-            sourceApp = derived.sourceApp,
-            entitiesJson = ExtractedCodec.encode(derived.entities),
-            searchBlob = derived.searchBlob,
-            indexedAtMillis = System.currentTimeMillis(),
-            headline = derived.headline,
-            linesBlob = TextLayout.encode(lines),
-            codesBlob = CodeExtractor.encode(codes),
-            script = (result?.script ?: ReadScript.NONE).id,
-            phash = result?.phash ?: 0L,
-            // A read that produced nothing is not marked as done by this engine version, so the
-            // retry budget gets another go at it on a later scan rather than writing it off.
-            readVersion = if (result == null) 0 else EngineVersion.READ,
-            deriveVersion = EngineVersion.DERIVE,
-            readAttempts = 1
-        )
-    }
-
     /** A re-read keeps the row's identity and everything the user decided about it. */
     private fun ShotEntity.refreshed(result: ReadResult?): ShotEntity {
         if (result == null) return copy(readAttempts = readAttempts + 1)
@@ -268,7 +237,7 @@ class IndexWorker(
         val derived = Derivation.derive(displayName, result.text, result.lines, result.codes)
         return copy(
             text = result.text,
-            textHash = if (result.text.isBlank()) "" else sha1(result.text),
+            textHash = if (result.text.isBlank()) "" else ShotRows.sha1(result.text),
             category = derived.category.id,
             sourceApp = derived.sourceApp,
             entitiesJson = ExtractedCodec.encode(derived.entities),
@@ -283,11 +252,6 @@ class IndexWorker(
             readAttempts = readAttempts + 1
         )
     }
-
-    private fun sha1(value: String): String =
-        MessageDigest.getInstance("SHA-1")
-            .digest(value.toByteArray())
-            .joinToString("") { "%02x".format(it) }
 
     companion object {
         private const val UNIQUE_NAME = "deja-index"

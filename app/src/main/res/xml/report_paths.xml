@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the folder a problem report is copied into. Nothing else in Deja's storage is shareable. -->
+<paths>
+    <cache-path name="reports" path="reports/" />
+</paths>

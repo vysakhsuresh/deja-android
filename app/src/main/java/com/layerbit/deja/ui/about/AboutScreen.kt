@@ -35,6 +35,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.BuildConfig
 import com.layerbit.deja.DejaApplication
 import com.layerbit.deja.brand.BrandLinks
+import com.layerbit.deja.util.CrashLog
 import com.layerbit.deja.data.db.LibraryStats
 import com.layerbit.deja.data.model.Category
 import com.layerbit.deja.ui.components.ActionRow
@@ -217,6 +218,24 @@ fun AboutScreen(
                 title = "Get help",
                 subtitle = "WhatsApp or email — whichever suits you",
                 onClick = { showHelp = true }
+            )
+            Spacer(Modifier.height(10.dp))
+            ActionRow(
+                title = "Report a problem",
+                subtitle = if (CrashLog.hasEntries(context)) {
+                    "Emails us the crash log Deja kept on this phone. You see it before it goes."
+                } else {
+                    "Emails us your phone model and Android version, and whatever you write."
+                },
+                onClick = {
+                    BrandLinks.reportProblem(
+                        context,
+                        subject = "Deja problem report",
+                        body = "What happened:\n\n\n---\nDeja ${BuildConfig.VERSION_NAME} · " +
+                            "Android ${android.os.Build.VERSION.SDK_INT} · " +
+                            "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+                    )
+                }
             )
             Spacer(Modifier.height(10.dp))
             ActionRow(

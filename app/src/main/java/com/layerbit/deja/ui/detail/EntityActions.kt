@@ -1,13 +1,12 @@
 package com.layerbit.deja.ui.detail
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
 import com.layerbit.deja.data.model.Extracted
 import com.layerbit.deja.data.model.EntityType
+import com.layerbit.deja.util.Clipboard
 
 /**
  * What you can do with a thing Deja found, beyond looking at it.
@@ -91,7 +90,7 @@ object EntityActions {
         }
 
         actions += EntityAction(COPY, primary = actions.none { it.primary }) {
-            context.copy(item.type.label, value)
+            Clipboard.copy(context, item.type.label, value, item.type.sensitive)
         }
 
         // Only worth offering for values distinctive enough that a second hit means something.
@@ -128,9 +127,4 @@ object EntityActions {
 /** Nothing here is required to resolve - a phone with no dialler is unusual, not impossible. */
 private fun Context.start(intent: Intent) {
     runCatching { startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-}
-
-private fun Context.copy(label: String, value: String) {
-    getSystemService(ClipboardManager::class.java)
-        ?.setPrimaryClip(ClipData.newPlainText(label, value))
 }

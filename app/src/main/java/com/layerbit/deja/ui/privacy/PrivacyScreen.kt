@@ -1,6 +1,22 @@
 package com.layerbit.deja.ui.privacy
 
+import android.Manifest
 import android.app.Application
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.semantics.Role
+import com.layerbit.deja.ambient.ShotNotifier
+import com.layerbit.deja.ui.theme.ThemeChoice
+import com.layerbit.deja.ui.theme.ThemeSettings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,7 +52,16 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.net.Uri
 import com.layerbit.deja.DejaApplication
+import com.layerbit.deja.ambient.AmbientPreferences
+import com.layerbit.deja.ambient.NewScreenshotWorker
+import com.layerbit.deja.data.export.IndexExporter
+import com.layerbit.deja.util.CrashLog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import com.layerbit.deja.data.index.IndexWorker
 import com.layerbit.deja.data.index.IndexingState
 import com.layerbit.deja.ui.components.ActionRow
@@ -62,12 +87,38 @@ class PrivacyViewModel(app: Application) : AndroidViewModel(app) {
     val indexing = IndexingState.progress
     val incomplete = IndexingState.incomplete
 
+    private val ambient = AmbientPreferences(app)
+    private val _notify = MutableStateFlow(ambient.notifyNewShots)
+    val notify = _notify.asStateFlow()
+
+    /** What the last export did, for the line under the button. Null until one has run. */
+    private val _exported = MutableStateFlow<String?>(null)
+    val exported = _exported.asStateFlow()
+
+    fun setNotify(on: Boolean) {
+        ambient.notifyNewShots = on
+        _notify.value = on
+        if (on) NewScreenshotWorker.schedule(getApplication()) else NewScreenshotWorker.cancel(getApplication())
+    }
+
+    fun export(target: Uri, includeSensitive: Boolean) {
+        viewModelScope.launch {
+            _exported.value = runCatching {
+                val count = withContext(Dispatchers.IO) {
+                    IndexExporter.export(getApplication(), target, includeSensitive)
+                }
+                if (count == 1) "Exported 1 screenshot" else "Exported $count screenshots"
+            }.getOrElse { "Export failed: ${it.message ?: "could not write the file"}" }
+        }
+    }
+
     fun clearIndex() {
         viewModelScope.launch {
             repository.clearIndex()
             // "Everything Deja knows" has to mean everything, including the handful of things
             // typed into the search box. Leaving those behind would make the control a lie.
             searchHistory.clear()
+            CrashLog.clear(getApplication())
             IndexingState.reset()
             // restart() forgets the recorded MediaStore generation and enqueues a fresh scan, so
             // reading starts again immediately instead of waiting for the next app launch - which
@@ -95,6 +146,64 @@ fun PrivacyScreen(
     val incomplete by viewModel.incomplete.collectAsState()
     var pending by remember { mutableStateOf(Pending.NONE) }
     var confirmClear by remember { mutableStateOf(false) }
+    val notify by viewModel.notify.collectAsState()
+    val exported by viewModel.exported.collectAsState()
+    val theme by ThemeSettings.choice.collectAsState()
+    var notifyBlocked by remember { mutableStateOf(false) }
+    var askExport by remember { mutableStateOf(false) }
+    var exportSensitive by remember { mutableStateOf(false) }
+
+    // Asked for here, at the moment someone switches the feature on - never at launch, and never
+    // for anything else.
+    val notificationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) viewModel.setNotify(true) else notifyBlocked = true
+    }
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(IndexExporter.MIME)
+    ) { uri ->
+        if (uri != null) viewModel.export(uri, exportSensitive)
+    }
+
+    if (notifyBlocked) {
+        DejaDialog(
+            title = "Notifications are off for Deja",
+            message = "Android is blocking Deja's notifications, so it can't tell you what's in a " +
+                "new screenshot. You can allow them in Settings.",
+            confirmLabel = "Open settings",
+            onConfirm = {
+                notifyBlocked = false
+                context.startActivity(
+                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                )
+            },
+            onDismiss = { notifyBlocked = false }
+        )
+    }
+
+    if (askExport) {
+        DejaDialog(
+            title = "Export what Deja knows",
+            message = "Writes everything Deja has read to a JSON file you choose. One-time codes, " +
+                "passwords, and card and ID numbers are left out — including where they appear in " +
+                "the text — unless you choose to include them.",
+            confirmLabel = "Export",
+            onConfirm = {
+                askExport = false
+                exportSensitive = false
+                exportLauncher.launch("deja-index.json")
+            },
+            secondaryLabel = "Include them",
+            onSecondary = {
+                askExport = false
+                exportSensitive = true
+                exportLauncher.launch("deja-index-with-sensitive.json")
+            },
+            onDismiss = { askExport = false }
+        )
+    }
 
     // Re-reading or wiping the index while a scan is mid-flight leaves the two halves disagreeing
     // about what has been read. Rather than quietly blocking it, say what is going on and let the
@@ -187,6 +296,34 @@ fun PrivacyScreen(
             Claim("ID and card numbers stay masked until tapped")
 
             Spacer(Modifier.height(16.dp))
+            SectionLabel("New screenshots")
+            Spacer(Modifier.height(10.dp))
+            ToggleRow(
+                title = "Tell me what's in a new screenshot",
+                subtitle = "Take a screenshot of a code, a Wi-Fi password, a booking or a payment " +
+                    "and Deja shows it in a notification with Copy. Read on this phone like " +
+                    "everything else; codes stay masked.",
+                checked = notify && ShotNotifier.canPost(context),
+                onChange = { on ->
+                    when {
+                        !on -> viewModel.setNotify(false)
+                        ShotNotifier.canPost(context) -> viewModel.setNotify(true)
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
+                            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        else -> notifyBlocked = true
+                    }
+                }
+            )
+
+            Spacer(Modifier.height(16.dp))
+            SectionLabel("Appearance")
+            Spacer(Modifier.height(10.dp))
+            ThemePicker(
+                current = theme,
+                onPick = { ThemeSettings.set(context, it) }
+            )
+
+            Spacer(Modifier.height(16.dp))
             SectionLabel("The index")
             Spacer(Modifier.height(10.dp))
 
@@ -241,6 +378,13 @@ fun PrivacyScreen(
             )
             Spacer(Modifier.height(10.dp))
             ActionRow(
+                title = "Export what Deja knows",
+                subtitle = exported ?: "Everything Deja has read, as a file you keep. There is " +
+                    "nowhere else it could be.",
+                onClick = { askExport = true }
+            )
+            Spacer(Modifier.height(10.dp))
+            ActionRow(
                 title = "Delete everything Deja knows",
                 subtitle = "Clears the index. Your screenshots themselves stay put.",
                 tint = DejaColors.Danger,
@@ -282,6 +426,80 @@ private fun Claim(text: String) {
         )
         Spacer(Modifier.width(12.dp))
         Text(text = text, color = DejaColors.Text, fontSize = 14.sp)
+    }
+}
+
+@Composable
+private fun ToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(15.dp))
+            .background(DejaColors.SurfaceDim)
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(text = title, color = DejaColors.Text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(3.dp))
+            Text(text = subtitle, color = DejaColors.Dim, fontSize = 12.5.sp, lineHeight = 17.sp)
+        }
+        Spacer(Modifier.width(12.dp))
+        // The row is the control; the switch is only its picture, so TalkBack hears one thing.
+        Switch(
+            checked = checked,
+            onCheckedChange = null,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = DejaColors.OnAmber,
+                checkedTrackColor = DejaColors.Amber,
+                uncheckedThumbColor = DejaColors.Muted,
+                uncheckedTrackColor = DejaColors.Border,
+                uncheckedBorderColor = DejaColors.BorderStrong
+            )
+        )
+    }
+}
+
+@Composable
+private fun ThemePicker(current: ThemeChoice, onPick: (ThemeChoice) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(15.dp))
+            .background(DejaColors.SurfaceDim)
+            .padding(4.dp)
+            .selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        ThemeChoice.entries.forEach { choice ->
+            val selected = choice == current
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (selected) DejaColors.AmberDim else DejaColors.SurfaceDim)
+                    .selectable(selected = selected, role = Role.RadioButton) { onPick(choice) },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = when (choice) {
+                        ThemeChoice.SYSTEM -> "Match phone"
+                        ThemeChoice.DARK -> "Dark"
+                        ThemeChoice.LIGHT -> "Light"
+                    },
+                    color = if (selected) DejaColors.Amber else DejaColors.Muted,
+                    fontSize = 13.5.sp,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                )
+            }
+        }
     }
 }
 

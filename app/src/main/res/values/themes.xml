@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="deja_background">#0E0D0C</color>
+    <!-- The window behind Compose, seen for a frame at cold start. Follows the system theme;
+         values-night holds the dark one. -->
+    <color name="deja_background">#F6F1EA</color>
 
-    <style name="Theme.Deja" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.Deja" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/deja_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

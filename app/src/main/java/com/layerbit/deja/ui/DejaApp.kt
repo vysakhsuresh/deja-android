@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +39,7 @@ import com.layerbit.deja.ui.browse.BrowseScreen
 import com.layerbit.deja.ui.cleanup.CleanupScreen
 import com.layerbit.deja.ui.components.DejaDialog
 import com.layerbit.deja.ui.components.Tab
+import com.layerbit.deja.ui.detail.DetailContext
 import com.layerbit.deja.ui.detail.DetailScreen
 import com.layerbit.deja.ui.onboarding.OnboardingScreen
 import com.layerbit.deja.ui.privacy.PrivacyScreen
@@ -191,6 +193,21 @@ private fun ScanGate() {
 @Composable
 private fun DejaNavHost(partialAccess: Boolean, onRequestMoreAccess: () -> Unit) {
     val navController = rememberNavController()
+
+    // A notification, widget, share or tile asked for somewhere specific. Acted on once, then
+    // cleared, so returning to the app later does not replay it.
+    val launch by LaunchRequest.pending.collectAsState()
+    LaunchedEffect(launch) {
+        when (val target = launch) {
+            is Launch.Shot -> {
+                DetailContext.set(listOf(target.shotId))
+                navController.navigate(Routes.detail(target.shotId)) { launchSingleTop = true }
+            }
+            Launch.Search -> navController.navigate(Routes.SEARCH) { launchSingleTop = true }
+            null -> return@LaunchedEffect
+        }
+        LaunchRequest.consume()
+    }
 
     val goTab: (Tab) -> Unit = { tab ->
         val route = when (tab) {

@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -409,7 +410,7 @@ private fun ResultCard(shot: ShotEntity, tokens: List<String>, onClick: () -> Un
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = highlighted(snippet(shot.text, tokens), tokens),
+                text = highlighted(snippet(shot.text, tokens), tokens, DejaColors.AmberBright),
                 color = DejaColors.Muted,
                 fontSize = 13.5.sp,
                 lineHeight = 19.sp,
@@ -426,11 +427,11 @@ private fun ResultCard(shot: ShotEntity, tokens: List<String>, onClick: () -> Un
  * re-read each one to work out why it is in the list. With it, the reason a screenshot matched
  * is the first thing visible on the card.
  */
-private fun highlighted(text: String, tokens: List<String>): AnnotatedString =
+private fun highlighted(text: String, tokens: List<String>, accent: Color): AnnotatedString =
     buildAnnotatedString {
         append(text)
         val style = SpanStyle(
-            color = DejaColors.AmberBright,
+            color = accent,
             fontWeight = FontWeight.SemiBold
         )
         tokens.forEach { token ->

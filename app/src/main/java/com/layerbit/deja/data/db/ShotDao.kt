@@ -79,6 +79,31 @@ interface ShotDao {
     @Query("SELECT * FROM shots WHERE id = :id")
     suspend fun byId(id: Long): ShotEntity?
 
+    @Query("SELECT * FROM shots WHERE mediaId = :mediaId")
+    suspend fun byMediaId(mediaId: Long): ShotEntity?
+
+    @Query("SELECT mediaId FROM shots WHERE mediaId IN (:mediaIds)")
+    suspend fun indexedAmong(mediaIds: List<Long>): List<Long>
+
+    /**
+     * Recent rows that extracted something of [entityTypeId]. A LIKE over the JSON is crude, but
+     * it only ever runs over the newest rows for a widget, and it saves a joined table that
+     * nothing else would use.
+     */
+    @Query(
+        """
+        SELECT * FROM shots WHERE entitiesJson LIKE '%"t":"' || :entityTypeId || '"%'
+        ORDER BY dateTakenMillis DESC LIMIT :limit
+        """
+    )
+    suspend fun recentWithEntity(entityTypeId: String, limit: Int): List<ShotEntity>
+
+    @Query("SELECT * FROM shots WHERE pinned = 1 ORDER BY dateTakenMillis DESC LIMIT :limit")
+    suspend fun pinned(limit: Int): List<ShotEntity>
+
+    @Query("SELECT * FROM shots ORDER BY dateTakenMillis DESC")
+    suspend fun all(): List<ShotEntity>
+
     // --- Engine upkeep -------------------------------------------------------------------
     //
     // Rows carry the engine version that produced them, so an improved engine can find exactly

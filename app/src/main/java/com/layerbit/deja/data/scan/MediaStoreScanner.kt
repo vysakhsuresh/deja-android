@@ -15,11 +15,35 @@ data class ScannedShot(
 
 /**
  * Finds screenshots through MediaStore. Deja deliberately reads nothing else on the device: the
- * queries below are scoped to the Screenshots bucket, not the whole image library.
+ * queries below are scoped to the Screenshots bucket, not the whole image library - plus the one
+ * folder Deja writes itself, where images shared into it are kept.
  */
 class MediaStoreScanner(private val context: Context) {
 
-    fun scan(): List<ScannedShot> {
+    /** Every screenshot on the device, newest first. */
+    fun scan(): List<ScannedShot> = query(SCOPE, SCOPE_ARGS)
+
+    /**
+     * The subset of [mediaIds] that are screenshots. Used when MediaStore reports which rows
+     * changed: most changes on a phone are camera photos and downloads, and those are none of
+     * Deja's business.
+     */
+    fun screenshotsAmong(mediaIds: Collection<Long>): List<ScannedShot> {
+        if (mediaIds.isEmpty()) return emptyList()
+        val ids = mediaIds.joinToString(",")
+        return query("($SCOPE) AND ${MediaStore.Images.Media._ID} IN ($ids)", SCOPE_ARGS)
+    }
+
+    /** Screenshots added in the last [seconds]. The fallback when MediaStore does not say which. */
+    fun addedWithin(seconds: Long): List<ScannedShot> {
+        val since = System.currentTimeMillis() / 1000L - seconds
+        return query(
+            "($SCOPE) AND ${MediaStore.Images.Media.DATE_ADDED} >= ?",
+            SCOPE_ARGS + since.toString()
+        )
+    }
+
+    private fun query(selection: String, args: Array<String>): List<ScannedShot> {
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.DISPLAY_NAME,
@@ -27,12 +51,6 @@ class MediaStoreScanner(private val context: Context) {
             MediaStore.Images.Media.DATE_ADDED,
             MediaStore.Images.Media.SIZE
         )
-
-        // OEMs disagree on where screenshots live - Pictures/Screenshots and DCIM/Screenshots are
-        // both common - so match on the path or the bucket name rather than one fixed folder.
-        val selection = "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ? OR " +
-            "${MediaStore.Images.Media.BUCKET_DISPLAY_NAME} = ?"
-        val args = arrayOf("%Screenshots%", "Screenshots")
 
         val results = mutableListOf<ScannedShot>()
         context.contentResolver.query(
@@ -70,5 +88,17 @@ class MediaStoreScanner(private val context: Context) {
             }
         }
         return results
+    }
+
+    companion object {
+        /** Where images shared into Deja are saved, so they live in MediaStore like any other. */
+        const val SHARED_RELATIVE_PATH = "Pictures/Deja/"
+
+        // OEMs disagree on where screenshots live - Pictures/Screenshots and DCIM/Screenshots are
+        // both common - so match on the path or the bucket name rather than one fixed folder.
+        private val SCOPE = "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ? OR " +
+            "${MediaStore.Images.Media.BUCKET_DISPLAY_NAME} = ? OR " +
+            "${MediaStore.Images.Media.RELATIVE_PATH} = ?"
+        private val SCOPE_ARGS = arrayOf("%Screenshots%", "Screenshots", SHARED_RELATIVE_PATH)
     }
 }

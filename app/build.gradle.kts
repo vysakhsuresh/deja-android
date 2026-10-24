@@ -111,6 +111,9 @@ dependencies {
 
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
+    // Home-screen widgets. Checked in the merged manifest: it adds no network permission.
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+
     // Every one of these is the bundled build, never the "-unbundled" / Play-Services-backed
     // one: the models ship inside the APK, so nothing is ever downloaded and all of it works
     // with no network at all. That costs APK size and it is the whole point - an unbundled

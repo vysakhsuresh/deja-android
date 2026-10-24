@@ -16,6 +16,8 @@ import com.layerbit.deja.data.index.SearchPlan
 import com.layerbit.deja.data.index.SearchQuery
 import com.layerbit.deja.data.model.Category
 import com.layerbit.deja.data.model.CleanupGroup
+import com.layerbit.deja.ambient.ShotNotifier
+import com.layerbit.deja.widget.Widgets
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.Flow
 
@@ -47,10 +49,15 @@ class ShotRepository(private val context: Context) {
 
     fun observePinnedCount(): Flow<Int> = dao.observePinnedCount()
 
-    suspend fun setPinned(id: Long, pinned: Boolean) = dao.setPinned(id, pinned)
+    suspend fun setPinned(id: Long, pinned: Boolean) {
+        dao.setPinned(id, pinned)
+        Widgets.refresh(context)
+    }
 
     suspend fun setPinned(ids: Collection<Long>, pinned: Boolean) {
-        if (ids.isNotEmpty()) dao.setPinnedAll(ids.toList(), pinned)
+        if (ids.isEmpty()) return
+        dao.setPinnedAll(ids.toList(), pinned)
+        Widgets.refresh(context)
     }
 
     /**
@@ -295,9 +302,19 @@ class ShotRepository(private val context: Context) {
     fun deleteForeverRequest(uris: List<Uri>): PendingIntent =
         MediaStore.createDeleteRequest(context.contentResolver, uris)
 
-    suspend fun forgetMediaIds(mediaIds: List<Long>) = dao.deleteByMediaIds(mediaIds)
+    suspend fun forgetMediaIds(mediaIds: List<Long>) {
+        dao.deleteByMediaIds(mediaIds)
+        Widgets.refresh(context)
+    }
 
-    suspend fun clearIndex() = dao.clear()
+    /** Everything goes, including what a widget or a notification is still showing. */
+    suspend fun clearIndex() {
+        dao.clear()
+        ShotNotifier.cancelAll(context)
+        Widgets.refresh(context)
+    }
+
+    suspend fun everything(): List<ShotEntity> = dao.all()
 
     private companion object {
         const val CANDIDATE_LIMIT = 400
