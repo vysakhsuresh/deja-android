@@ -68,9 +68,64 @@ abstract class DejaDatabase : RoomDatabase() {
          */
         private val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
+                if (!hasColumn(db, "shots", "headline")) {
+                    // A different "version 4" from an unreleased build (notes and reminders)
+                    // that never had the 3 -> 4 engine columns. Rebuild into the v5 shape.
+                    rebuildShotsAsV5(db)
+                    return
+                }
                 db.execSQL("ALTER TABLE shots ADD COLUMN codesBlob TEXT NOT NULL DEFAULT ''")
                 db.execSQL("ALTER TABLE shots ADD COLUMN script TEXT NOT NULL DEFAULT ''")
             }
+        }
+
+        private fun hasColumn(db: SupportSQLiteDatabase, table: String, column: String): Boolean =
+            db.query("PRAGMA table_info(`$table`)").use { c ->
+                val nameIdx = c.getColumnIndexOrThrow("name")
+                generateSequence { if (c.moveToNext()) c.getString(nameIdx) else null }
+                    .any { it == column }
+            }
+
+        /**
+         * Copies every row into a fresh v5 table, keeping the text, pins and ids. The new engine
+         * columns start at their defaults (version stamps 0), so the worker re-reads them in the
+         * background exactly as it would after MIGRATION_3_4. Columns v5 doesn't know are dropped.
+         */
+        private fun rebuildShotsAsV5(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE `shots_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`mediaId` INTEGER NOT NULL, `uri` TEXT NOT NULL, `displayName` TEXT NOT NULL, " +
+                    "`dateTakenMillis` INTEGER NOT NULL, `sizeBytes` INTEGER NOT NULL, " +
+                    "`text` TEXT NOT NULL, `textHash` TEXT NOT NULL, `category` TEXT NOT NULL, " +
+                    "`sourceApp` TEXT NOT NULL, `entitiesJson` TEXT NOT NULL, " +
+                    "`searchBlob` TEXT NOT NULL, `indexedAtMillis` INTEGER NOT NULL, " +
+                    "`pinned` INTEGER NOT NULL, `headline` TEXT NOT NULL, " +
+                    "`linesBlob` TEXT NOT NULL, `phash` INTEGER NOT NULL, " +
+                    "`readVersion` INTEGER NOT NULL, `deriveVersion` INTEGER NOT NULL, " +
+                    "`readAttempts` INTEGER NOT NULL, `codesBlob` TEXT NOT NULL, " +
+                    "`script` TEXT NOT NULL)"
+            )
+            val kept = "`id`, `mediaId`, `uri`, `displayName`, `dateTakenMillis`, `sizeBytes`, " +
+                "`text`, `textHash`, `category`, `sourceApp`, `entitiesJson`, `searchBlob`, " +
+                "`indexedAtMillis`, `pinned`"
+            db.execSQL(
+                "INSERT INTO `shots_new` ($kept, `headline`, `linesBlob`, `phash`, " +
+                    "`readVersion`, `deriveVersion`, `readAttempts`, `codesBlob`, `script`) " +
+                    "SELECT $kept, '', '', 0, 0, 0, 0, '', '' FROM `shots`"
+            )
+            db.execSQL("DROP TABLE `shots`")
+            db.execSQL("ALTER TABLE `shots_new` RENAME TO `shots`")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_shots_mediaId` ON `shots` (`mediaId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_shots_dateTakenMillis` ON `shots` (`dateTakenMillis`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_shots_category` ON `shots` (`category`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_shots_sourceApp` ON `shots` (`sourceApp`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_shots_textHash` ON `shots` (`textHash`)")
+            // Dropping the old table took its FTS sync triggers with it.
+            db.execSQL("CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_shots_fts_BEFORE_UPDATE BEFORE UPDATE ON `shots` BEGIN DELETE FROM `shots_fts` WHERE `docid`=OLD.`rowid`; END")
+            db.execSQL("CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_shots_fts_BEFORE_DELETE BEFORE DELETE ON `shots` BEGIN DELETE FROM `shots_fts` WHERE `docid`=OLD.`rowid`; END")
+            db.execSQL("CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_shots_fts_AFTER_UPDATE AFTER UPDATE ON `shots` BEGIN INSERT INTO `shots_fts`(`docid`, `searchBlob`) VALUES (NEW.`rowid`, NEW.`searchBlob`); END")
+            db.execSQL("CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_shots_fts_AFTER_INSERT AFTER INSERT ON `shots` BEGIN INSERT INTO `shots_fts`(`docid`, `searchBlob`) VALUES (NEW.`rowid`, NEW.`searchBlob`); END")
+            db.execSQL("INSERT INTO `shots_fts`(`shots_fts`) VALUES('rebuild')")
         }
 
         @Volatile
