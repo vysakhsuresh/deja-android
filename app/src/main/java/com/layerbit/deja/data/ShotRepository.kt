@@ -264,7 +264,8 @@ class ShotRepository(private val context: Context) {
 
     private fun tokenSet(text: String): Set<String> =
         text.lowercase()
-            .split(Regex("[^\\p{L}\\p{N}]+"))
+            // \p{M} so Devanagari words survive the split - see TextQuality.
+            .split(Regex("[^\\p{L}\\p{N}\\p{M}]+"))
             .asSequence()
             .filter { it.length >= 3 }
             .take(TOKENS_PER_SHOT)

@@ -27,7 +27,12 @@ data class Derived(
 
 object Derivation {
 
-    fun derive(displayName: String, text: String, lines: List<TextLine>): Derived {
+    fun derive(
+        displayName: String,
+        text: String,
+        lines: List<TextLine>,
+        codes: List<String> = emptyList()
+    ): Derived {
         val headline = TextLayout.headline(lines)
 
         // Filename first - it names the app the screenshot was *taken in*, which is the truth.
@@ -36,7 +41,14 @@ object Derivation {
         val sourceApp = SourceApp.detect(displayName)
             ?: SourceApp.detectInText(headline).orEmpty()
 
-        val entities = EntityExtractor.extract(text, lines)
+        // Codes first. A payload is structured data that was encoded deliberately, where
+        // OCR output is a best guess at some pixels, so where the two disagree about a value
+        // the barcode is the one telling the truth.
+        val fromCodes = CodeExtractor.extract(codes)
+        val fromText = EntityExtractor.extract(text, lines)
+            .filterNot { textual -> fromCodes.any { it.type == textual.type } }
+        val entities = fromCodes + fromText
+
         val category = Classifier.classify(text, headline, sourceApp, entities)
 
         return Derived(
@@ -44,7 +56,7 @@ object Derivation {
             entities = entities,
             headline = headline,
             sourceApp = sourceApp,
-            searchBlob = buildSearchBlob(text, headline, sourceApp, category, entities)
+            searchBlob = buildSearchBlob(text, headline, sourceApp, category, entities, codes)
         )
     }
 
@@ -65,7 +77,8 @@ object Derivation {
         headline: String,
         sourceApp: String,
         category: Category,
-        entities: List<Extracted>
+        entities: List<Extracted>,
+        codes: List<String>
     ): String = buildString {
         append(text)
         if (headline.isNotEmpty()) {
@@ -82,6 +95,13 @@ object Derivation {
         if (values.isNotEmpty()) {
             append(' ')
             append(values)
+        }
+        // A QR code carries no text for OCR to find, so without this a Wi-Fi code screenshot is
+        // unsearchable by the network's own name.
+        val fromCodes = CodeExtractor.searchText(codes)
+        if (fromCodes.isNotEmpty()) {
+            append(' ')
+            append(fromCodes)
         }
     }
 }

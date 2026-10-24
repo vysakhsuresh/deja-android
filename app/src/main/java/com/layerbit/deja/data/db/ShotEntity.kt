@@ -60,7 +60,18 @@ data class ShotEntity(
     /** Which `EngineVersion.DERIVE` produced the category, entities and search blob. */
     val deriveVersion: Int = 0,
     /** Reads attempted. Caps the retries on a screenshot that genuinely will not decode. */
-    val readAttempts: Int = 0
+    val readAttempts: Int = 0,
+    /**
+     * Raw QR and barcode payloads, encoded by `CodeExtractor`. Stored unparsed so that a better
+     * parser - a new payload format, a sharper boarding-pass reader - is a re-derive rather than
+     * a re-read of every image on the phone.
+     */
+    val codesBlob: String = "",
+    /**
+     * Which recogniser produced the text, as a `ReadScript` id. "none" means neither could make
+     * sense of the page, which the detail screen says out loud rather than showing nonsense.
+     */
+    val script: String = ""
 )
 
 /**

@@ -26,8 +26,8 @@ android {
         // releases would mean WRITE_EXTERNAL_STORAGE and an irreversible delete instead.
         minSdk = 30
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
     }
 
     signingConfigs {
@@ -105,9 +105,23 @@ dependencies {
 
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
-    // Bundled (not the "-unbundled" / Play-Services-backed) build: the recognition model ships
-    // inside the APK, so OCR never needs a model download and works with no network at all.
+    // Every one of these is the bundled build, never the "-unbundled" / Play-Services-backed
+    // one: the models ship inside the APK, so nothing is ever downloaded and all of it works
+    // with no network at all. That costs APK size and it is the whole point - an unbundled
+    // model would need the INTERNET permission this app refuses to declare.
+    //
+    // They declare permissions of their own, which the manifest merger unions into ours. The
+    // tools:node="remove" lines in AndroidManifest.xml strip network access regardless; check
+    // app/build/outputs/logs/manifest-merger-*-report.txt after a build.
     implementation("com.google.mlkit:text-recognition:16.0.1")
+
+    // Devanagari covers Hindi, Marathi, Nepali, Sanskrit and Konkani, and reads Latin as well,
+    // so a mixed Hindi/English screenshot comes back whole rather than half-read.
+    implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
+
+    // Wi-Fi QR codes, UPI QR codes and the PDF417/Aztec block on a boarding pass. The payload
+    // is machine-readable and was being thrown away.
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
 
     testImplementation("junit:junit:4.13.2")
 }

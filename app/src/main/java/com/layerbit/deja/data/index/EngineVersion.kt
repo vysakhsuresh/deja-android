@@ -25,13 +25,20 @@ package com.layerbit.deja.data.index
 object EngineVersion {
 
     /**
-     * 2 - line geometry and a perceptual hash are now captured alongside the text. Rows written
-     * by version 1 have neither, so they are re-read in the background.
+     * 3 - QR and barcode payloads are captured, and a page the Latin recogniser cannot make
+     * sense of is given a second pass with the Devanagari one. Neither can be recovered from
+     * text already in the index, so older rows are re-read in the background.
+     *
+     * (2 added line geometry and a perceptual hash. 1 was text only.)
      */
-    const val READ = 2
+    const val READ = 3
 
-    /** 1 - headline-aware classification, layout-aware extraction, headline in the search blob. */
-    const val DERIVE = 1
+    /**
+     * 2 - barcode payloads are parsed into entities and into the search blob.
+     *
+     * (1 added headline-aware classification and layout-aware extraction.)
+     */
+    const val DERIVE = 2
 
     /**
      * A screenshot whose read failed this many times is left alone.

@@ -122,7 +122,9 @@ object SearchQuery {
 
     fun tokenise(raw: String): List<String> =
         raw.lowercase()
-            .split(Regex("[^\\p{L}\\p{N}]+"))
+            // \p{M} keeps Devanagari whole - its vowel signs are category Mark, and without
+            // them in the class a Hindi search term splits into single consonants.
+            .split(Regex("[^\\p{L}\\p{N}\\p{M}]+"))
             .filter { it.length >= 2 && it !in stopwords }
             .distinct()
 

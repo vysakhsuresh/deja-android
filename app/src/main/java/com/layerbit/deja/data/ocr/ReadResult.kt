@@ -23,12 +23,33 @@ data class TextLine(
     val bottom: Int get() = top + height
 }
 
+/** Which recogniser produced the text, or that neither of them could. */
+enum class ReadScript(val id: String) {
+    LATIN("latin"),
+    DEVANAGARI("devanagari"),
+
+    /**
+     * Both passes came back looking like shape-matching rather than language - a script Deja
+     * has no model for, or an image with no real text in it. Recorded rather than papered over,
+     * so the app can say so instead of showing nonsense.
+     */
+    NONE("none");
+
+    companion object {
+        fun fromId(id: String): ReadScript = entries.firstOrNull { it.id == id } ?: LATIN
+    }
+}
+
 /**
  * @param text the lines joined in reading order, which is not the same as ML Kit's block order.
  * @param phash a 64-bit difference hash of the image; 0 when it could not be computed.
+ * @param codes raw payloads of any QR or barcode in the picture, left unparsed on purpose so a
+ *   better parser later is a re-derive rather than a re-read of every image on the phone.
  */
 data class ReadResult(
     val text: String,
     val lines: List<TextLine>,
-    val phash: Long
+    val phash: Long,
+    val codes: List<String>,
+    val script: ReadScript
 )

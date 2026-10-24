@@ -58,6 +58,7 @@ import com.layerbit.deja.data.db.ShotEntity
 import com.layerbit.deja.data.model.Category
 import com.layerbit.deja.data.model.Extracted
 import com.layerbit.deja.data.model.ExtractedCodec
+import com.layerbit.deja.data.ocr.ReadScript
 import com.layerbit.deja.ui.components.ScreenHeader
 import com.layerbit.deja.ui.components.ShotThumbnail
 import com.layerbit.deja.ui.components.TapTarget
@@ -204,6 +205,8 @@ private fun ShotPage(
 
     val entities = remember(shot.entitiesJson) { ExtractedCodec.decode(shot.entitiesJson) }
     val uri = remember(shot.uri) { Uri.parse(shot.uri) }
+    val script = remember(shot.script) { ReadScript.fromId(shot.script) }
+    val unreadable = script == ReadScript.NONE
 
     Column(
         modifier = Modifier
@@ -243,7 +246,15 @@ private fun ShotPage(
 
         if (entities.isEmpty()) {
             Text(
-                text = "Deja didn't find anything to act on in this one.",
+                // Saying "nothing here" when the real answer is "this is written in a script I
+                // have no model for" is the kind of small dishonesty that makes an app feel
+                // broken. The distinction costs one line and it is worth having.
+                text = if (unreadable && shot.text.isBlank()) {
+                    "Deja couldn't read any text in this one — either there is none, or it's " +
+                        "in a script it has no model for. The screenshot itself is untouched."
+                } else {
+                    "Deja didn't find anything to act on in this one."
+                },
                 color = DejaColors.Muted,
                 fontSize = 13.5.sp
             )
@@ -301,6 +312,7 @@ private fun ShotPage(
             text = buildList {
                 add(shot.dateTakenMillis.asReadableDate())
                 add(formatBytes(shot.sizeBytes))
+                if (script == ReadScript.DEVANAGARI) add("Devanagari")
                 if (shot.pinned) add("Kept")
             }.joinToString("  ·  "),
             color = DejaColors.Dim,

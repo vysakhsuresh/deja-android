@@ -34,8 +34,10 @@ these two lines remove network access no matter what any current or future depen
 
 Two consequences that shape the code:
 
-- **OCR uses ML Kit's bundled text recogniser**, not the unbundled Play-Services-backed one. The
-  model ships inside the APK; the unbundled build downloads it at runtime and would need network.
+- **Every ML Kit model is the bundled build**, never the unbundled Play-Services-backed one —
+  Latin text, Devanagari text and barcode scanning alike. The weights ship inside the APK; the
+  unbundled builds download them at runtime and would need network. That is the single largest
+  thing in the APK and it is the price of the guarantee.
 - **Thumbnails load straight from MediaStore**, not through an image library. The usual Compose
   image loaders declare `INTERNET` in their own manifests, which would be merged in.
 
@@ -43,7 +45,7 @@ Two consequences that shape the code:
 
 | | |
 |---|---|
-| Indexing | Scans the Screenshots bucket via MediaStore, OCRs anything new, drops rows for screenshots deleted elsewhere. Reads several screenshots at once, writes in batches, keeps the **line geometry** alongside the text, and re-reads anything an older engine version produced — in the background, without the index ever going dark. Runs in WorkManager so it survives the app closing, and can be stopped and resumed. |
+| Indexing | Scans the Screenshots bucket via MediaStore, reads anything new in **Latin or Devanagari** and decodes any **QR or barcode** in it, drops rows for screenshots deleted elsewhere. Reads several screenshots at once, writes in batches, keeps the **line geometry** alongside the text, and re-reads anything an older engine version produced — in the background, without the index ever going dark. Runs in WorkManager so it survives the app closing, and can be stopped and resumed. |
 | Timeline | Screenshots grouped by day, filterable by category **and by the app they came from**, with live scan progress and a stop control. Long-press anything to select, then keep, share or trash the lot in one go. Kept screenshots get a shelf along the top. |
 | Search | Everything-must-match first, anything-matches as a fallback, ranked by **where** a word appears rather than only how often. Understands quoted `"phrases"`, `-exclusions`, spelling variants, and **time** — "receipt last week", "tickets in june", "2024". Matched words are picked out in each result. Remembers the last eight searches that found something. |
 | Detail | Swipes sideways through whatever list you opened it from, double-taps to zoom, and turns what Deja pulled out into something you can act on — call a number, message it, save it as a contact, open a link, or find every other screenshot that mentions the same value. ID and card numbers are masked until tapped. The OCR text is selectable. |
@@ -107,9 +109,9 @@ produced it (`EngineVersion.kt`), and the worker brings stale rows forward in th
 
 | Pass | Triggered by | Cost |
 |---|---|---|
-| Re-derive | a change to the classifier, extractor, app detection or search blob | database only — a few thousand rows a second, no file I/O |
+| Re-derive | a change to the classifier, extractor, app detection, **code parser** or search blob | database only — a few thousand rows a second, no file I/O |
 | Read new | screenshots not in the index | OCR |
-| Backfill | a change to what OCR itself captures | OCR, in the background, capped per run |
+| Backfill | a change to what reading itself captures — a new script, barcode decoding | OCR, in the background, capped per run |
 
 So shipping a smarter classifier is now a one-line version bump that reaches the whole library
 before the progress bar finishes drawing. A change to OCR schedules a background re-read that
@@ -140,6 +142,58 @@ mattering more than another. So matching and ranking are separate jobs:
 - **Recency breaks ties and nothing more** — never enough to push an exact match below a vague
   one, which is what pure date ordering did.
 
+### Reading two scripts without paying for two
+
+A Latin recogniser handed Devanagari cannot return Devanagari — its output alphabet is Latin, so
+it returns the nearest Latin shapes it can find, and दिल्ली comes back as something like
+"fereft". That junk used to be stored as if it were text, which did three quiet kinds of damage:
+it poisoned the search index with tokens matching nothing, it randomised the duplicate hash so
+two identical screenshots stopped matching, and it filled the "text Deja read" panel with
+nonsense — which makes the app look broken rather than honestly limited.
+
+So `TextQuality` measures whether what came back reads like language: Latin tokens that are
+mixed-case mid-word, consonant runs, and stray single letters are what shape-matching produces.
+The same measurement does two jobs at two thresholds, and the difference matters because the two
+decisions have completely different costs:
+
+| | Threshold | If wrong |
+|---|---|---|
+| **Router** — try the Devanagari model too | 0.45 | one extra OCR pass; the better result wins anyway |
+| **Filter** — store nothing rather than junk | 0.75 **and** almost no plausible text | real text is lost |
+
+An English-only library never crosses the first threshold, so it **never pays for the second
+model at all** — and the Devanagari recogniser is built lazily, so on those devices it is never
+even loaded. A mixed Hindi/English page does cross it, and because the Devanagari model reads
+Latin as well, it comes back whole rather than half-read.
+
+> **`\p{M}` is load-bearing.** Devanagari vowel signs and the virama are Unicode category *Mark*,
+> not *Letter*, so a word-splitting class of `[^\p{L}\p{N}]+` cuts दिल्ली into द, ल, ल — three
+> meaningless single consonants. That shreds Hindi search terms, breaks the near-duplicate text
+> comparison, and makes the plausibility check condemn every correctly-read Devanagari page as
+> garbage. Every splitter in the codebase includes `\p{M}`. Do not remove it.
+
+### Codes a camera can read and OCR cannot
+
+A QR code has no text in it, so OCR has never been able to touch one — and Wi-Fi QRs, UPI QRs and
+boarding passes are among the most deliberately-kept screenshots there are.
+
+| Payload | What comes out |
+|---|---|
+| `WIFI:T:WPA;S:…;P:…;;` | network name, and the password as a **sensitive** value — masked until tapped, never in the search index |
+| `upi://pay?pa=…&am=…` | payee UPI ID and the exact amount |
+| IATA BCBP (PDF417/Aztec) | booking reference, flight number, both airports |
+| vCard, `mailto:`, `tel:`, `SMSTO:` | phone, email, link |
+| `http(s)://` | link |
+
+Payloads are stored **raw**; parsing happens in `CodeExtractor` at derive time. So sharpening the
+boarding-pass reader or adding a payload format later is a one-second `DERIVE` bump, not a
+re-read of every image on the phone. Where a code and the OCR text disagree about a value, the
+code wins — it was encoded deliberately, the text is a guess at some pixels.
+
+A screenshot that is *only* a QR code now works end to end: no readable text, but the Wi-Fi
+password is extracted, the category comes out right from the entity signal, and tapping copies
+it.
+
 ### Finding the duplicate that actually exists
 
 Exact matching on text and byte size only catches a file copied verbatim. What people accumulate
@@ -160,13 +214,11 @@ largest, then the newest.
   I screenshotted about the car"* will not work unless the word "car" is on the screen. That is a
   real ceiling and it is not an on-device LLM. The search field says "Search your screenshots"
   rather than "Ask anything" for that reason.
-- **Latin script only.** A Hindi, Marathi or Tamil screenshot indexes as noise. ML Kit ships a
-  bundled Devanagari recogniser that would fix it offline, at the cost of APK size — a decision
-  about what the app weighs, not a technical obstacle.
-- **No barcode or QR decoding.** Boarding passes, Wi-Fi QR codes and UPI QR codes carry a
-  machine-readable payload that is thrown away today. ML Kit's barcode scanner is bundled and
-  works offline; this is the same size trade as above. The engine-version machinery exists partly
-  so adding it later is a `READ` bump rather than a migration.
+- **Latin and Devanagari only.** Devanagari covers Hindi, Marathi, Nepali, Sanskrit and Konkani.
+  Tamil, Telugu, Bengali, Kannada, Malayalam, Gujarati, Urdu, Chinese, Japanese and Korean are
+  not read — ML Kit ships bundled models for the last three and nothing for the Indic ones
+  beyond Devanagari. A screenshot in an unread script is recorded as unreadable rather than
+  filled with junk, and the detail screen says so.
 - **Ask Deja and Collections** from the design are not implemented. Ask needs an on-device
   language model and is the intended paid tier.
 - **Names of people are not extracted.** Phone numbers, emails and handles are, and they are what
@@ -220,8 +272,8 @@ reading every tile first.
 Pinning also ended the destructive-migration shortcut. Earlier schema changes dropped the index
 and re-read everything, on the argument that an index is derived data. That argument holds right
 up until a column records a decision: pinning is something the user did, and no amount of
-re-reading screenshots recovers it. **v2 → v3 and v3 → v4 both ship real `Migration`s** and the
-index survives. Every schema change from here on does the same.
+re-reading screenshots recovers it. **v2 → v3, v3 → v4 and v4 → v5 all ship real `Migration`s**
+and the index survives every one. Every schema change from here on does the same.
 
 The FTS table needs nothing either time. Its triggers fire on the `shots` table and copy
 `searchBlob` across; adding a column beside it leaves both the column and the triggers intact.
@@ -236,12 +288,15 @@ app/src/main/java/com/layerbit/deja/
   data/
     db/            Room entities, DAO, and the FTS4 index over the OCR text
     scan/          MediaStoreScanner - finds screenshots, and only screenshots
-    ocr/           ScreenshotTextReader - ML Kit bundled Latin recogniser, bounded decode,
-                   line geometry and a perceptual hash out of one pass
+    ocr/           ScreenshotTextReader - bundled Latin + Devanagari recognisers and a
+                   barcode scanner over one bounded decode, plus line geometry and a
+                   perceptual hash
     index/         IndexWorker (three-pass scan), EngineVersion (what is stale and why),
                    Derivation (the pure text -> meaning step), Classifier, EntityExtractor,
                    TextLayout (reading order, headline, geometry codec), PerceptualHash,
-                   SearchQuery + DateHints (query -> plan), Ranker, IndexingState
+                   TextQuality (is this language or shape-matching?), CodeExtractor
+                   (QR/barcode payloads -> entities), SearchQuery + DateHints, Ranker,
+                   IndexingState
     ShotRepository Search, cleanup grouping, near-duplicates, trash requests
   ui/
     theme/         Palette and type from the design canvas

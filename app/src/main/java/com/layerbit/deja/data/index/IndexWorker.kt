@@ -12,6 +12,7 @@ import com.layerbit.deja.data.db.ShotDao
 import com.layerbit.deja.data.db.ShotEntity
 import com.layerbit.deja.data.model.ExtractedCodec
 import com.layerbit.deja.data.ocr.ReadResult
+import com.layerbit.deja.data.ocr.ReadScript
 import com.layerbit.deja.data.ocr.ScreenshotTextReader
 import com.layerbit.deja.data.scan.MediaGeneration
 import com.layerbit.deja.data.scan.MediaStoreScanner
@@ -171,7 +172,12 @@ class IndexWorker(
     }
 
     private fun ShotEntity.rederived(): ShotEntity {
-        val derived = Derivation.derive(displayName, text, TextLayout.decode(linesBlob))
+        val derived = Derivation.derive(
+            displayName = displayName,
+            text = text,
+            lines = TextLayout.decode(linesBlob),
+            codes = CodeExtractor.decode(codesBlob)
+        )
         return copy(
             category = derived.category.id,
             sourceApp = derived.sourceApp,
@@ -227,7 +233,8 @@ class IndexWorker(
     private fun newRow(shot: ScannedShot, result: ReadResult?): ShotEntity {
         val text = result?.text.orEmpty()
         val lines = result?.lines.orEmpty()
-        val derived = Derivation.derive(shot.displayName, text, lines)
+        val codes = result?.codes.orEmpty()
+        val derived = Derivation.derive(shot.displayName, text, lines, codes)
         return ShotEntity(
             mediaId = shot.mediaId,
             uri = shot.uri.toString(),
@@ -243,6 +250,8 @@ class IndexWorker(
             indexedAtMillis = System.currentTimeMillis(),
             headline = derived.headline,
             linesBlob = TextLayout.encode(lines),
+            codesBlob = CodeExtractor.encode(codes),
+            script = (result?.script ?: ReadScript.NONE).id,
             phash = result?.phash ?: 0L,
             // A read that produced nothing is not marked as done by this engine version, so the
             // retry budget gets another go at it on a later scan rather than writing it off.
@@ -256,7 +265,7 @@ class IndexWorker(
     private fun ShotEntity.refreshed(result: ReadResult?): ShotEntity {
         if (result == null) return copy(readAttempts = readAttempts + 1)
 
-        val derived = Derivation.derive(displayName, result.text, result.lines)
+        val derived = Derivation.derive(displayName, result.text, result.lines, result.codes)
         return copy(
             text = result.text,
             textHash = if (result.text.isBlank()) "" else sha1(result.text),
@@ -266,6 +275,8 @@ class IndexWorker(
             searchBlob = derived.searchBlob,
             headline = derived.headline,
             linesBlob = TextLayout.encode(result.lines),
+            codesBlob = CodeExtractor.encode(result.codes),
+            script = result.script.id,
             phash = result.phash,
             readVersion = EngineVersion.READ,
             deriveVersion = EngineVersion.DERIVE,

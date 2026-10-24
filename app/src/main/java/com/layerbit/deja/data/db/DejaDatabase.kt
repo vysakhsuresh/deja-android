@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ShotEntity::class, ShotFts::class],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class DejaDatabase : RoomDatabase() {
@@ -59,6 +59,20 @@ abstract class DejaDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Room for what a QR code carries, and for which recogniser read the page.
+         *
+         * Same shape as the last one: additive columns, nothing dropped, and the engine's
+         * version stamps - already a version behind by the time this runs - are what schedule
+         * the background re-read that fills them in.
+         */
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE shots ADD COLUMN codesBlob TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE shots ADD COLUMN script TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         @Volatile
         private var instance: DejaDatabase? = null
 
@@ -69,7 +83,7 @@ abstract class DejaDatabase : RoomDatabase() {
                     DejaDatabase::class.java,
                     "deja.db"
                 )
-                    .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     // Only reached from a schema version with no path to this one - an install
                     // from a build that never shipped. Rebuilding the index then is the correct
                     // outcome; for every version Deja has actually released there is a migration
