@@ -1,0 +1,241 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 5,
+    "identityHash": "5f69636a00248a76eec572482dd71924",
+    "entities": [
+      {
+        "tableName": "shots",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `mediaId` INTEGER NOT NULL, `uri` TEXT NOT NULL, `displayName` TEXT NOT NULL, `dateTakenMillis` INTEGER NOT NULL, `sizeBytes` INTEGER NOT NULL, `text` TEXT NOT NULL, `textHash` TEXT NOT NULL, `category` TEXT NOT NULL, `sourceApp` TEXT NOT NULL, `entitiesJson` TEXT NOT NULL, `searchBlob` TEXT NOT NULL, `indexedAtMillis` INTEGER NOT NULL, `pinned` INTEGER NOT NULL, `headline` TEXT NOT NULL, `linesBlob` TEXT NOT NULL, `phash` INTEGER NOT NULL, `readVersion` INTEGER NOT NULL, `deriveVersion` INTEGER NOT NULL, `readAttempts` INTEGER NOT NULL, `codesBlob` TEXT NOT NULL, `script` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mediaId",
+            "columnName": "mediaId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "uri",
+            "columnName": "uri",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayName",
+            "columnName": "displayName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dateTakenMillis",
+            "columnName": "dateTakenMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sizeBytes",
+            "columnName": "sizeBytes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "textHash",
+            "columnName": "textHash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceApp",
+            "columnName": "sourceApp",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entitiesJson",
+            "columnName": "entitiesJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "searchBlob",
+            "columnName": "searchBlob",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "indexedAtMillis",
+            "columnName": "indexedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pinned",
+            "columnName": "pinned",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "headline",
+            "columnName": "headline",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "linesBlob",
+            "columnName": "linesBlob",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "phash",
+            "columnName": "phash",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "readVersion",
+            "columnName": "readVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deriveVersion",
+            "columnName": "deriveVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "readAttempts",
+            "columnName": "readAttempts",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "codesBlob",
+            "columnName": "codesBlob",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "script",
+            "columnName": "script",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_shots_mediaId",
+            "unique": true,
+            "columnNames": [
+              "mediaId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_shots_mediaId` ON `${TABLE_NAME}` (`mediaId`)"
+          },
+          {
+            "name": "index_shots_dateTakenMillis",
+            "unique": false,
+            "columnNames": [
+              "dateTakenMillis"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_shots_dateTakenMillis` ON `${TABLE_NAME}` (`dateTakenMillis`)"
+          },
+          {
+            "name": "index_shots_category",
+            "unique": false,
+            "columnNames": [
+              "category"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_shots_category` ON `${TABLE_NAME}` (`category`)"
+          },
+          {
+            "name": "index_shots_sourceApp",
+            "unique": false,
+            "columnNames": [
+              "sourceApp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_shots_sourceApp` ON `${TABLE_NAME}` (`sourceApp`)"
+          },
+          {
+            "name": "index_shots_textHash",
+            "unique": false,
+            "columnNames": [
+              "textHash"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_shots_textHash` ON `${TABLE_NAME}` (`textHash`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "simple",
+          "tokenizerArgs": [],
+          "contentTable": "shots",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_shots_fts_BEFORE_UPDATE BEFORE UPDATE ON `shots` BEGIN DELETE FROM `shots_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_shots_fts_BEFORE_DELETE BEFORE DELETE ON `shots` BEGIN DELETE FROM `shots_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_shots_fts_AFTER_UPDATE AFTER UPDATE ON `shots` BEGIN INSERT INTO `shots_fts`(`docid`, `searchBlob`) VALUES (NEW.`rowid`, NEW.`searchBlob`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_shots_fts_AFTER_INSERT AFTER INSERT ON `shots` BEGIN INSERT INTO `shots_fts`(`docid`, `searchBlob`) VALUES (NEW.`rowid`, NEW.`searchBlob`); END"
+        ],
+        "tableName": "shots_fts",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`searchBlob` TEXT NOT NULL, content=`shots`)",
+        "fields": [
+          {
+            "fieldPath": "searchBlob",
+            "columnName": "searchBlob",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": []
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5f69636a00248a76eec572482dd71924')"
+    ]
+  }
+}
