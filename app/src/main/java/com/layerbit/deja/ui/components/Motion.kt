@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -85,6 +86,9 @@ fun Modifier.tappable(
     enabled: Boolean = true,
     pressScale: Float = 1f,
     hapticOnLongPress: Boolean = true,
+    role: Role? = Role.Button,
+    onClickLabel: String? = null,
+    onLongClickLabel: String? = null,
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ): Modifier {
@@ -95,6 +99,11 @@ fun Modifier.tappable(
         interactionSource = interaction,
         indication = LocalIndication.current,
         enabled = enabled,
+        // Every tappable is announced as a control. Without a role TalkBack reads the label and
+        // nothing else, so nobody can tell a button from a caption.
+        role = role,
+        onClickLabel = onClickLabel,
+        onLongClickLabel = onLongClickLabel,
         onLongClick = onLongClick?.let {
             {
                 if (hapticOnLongPress) {

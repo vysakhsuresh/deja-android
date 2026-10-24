@@ -44,6 +44,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -70,6 +71,11 @@ android {
     }
 
     packaging {
+        // Native libraries stay uncompressed and page-aligned inside the APK so they can be
+        // mapped straight from it - required on 16 KB page-size devices.
+        jniLibs {
+            useLegacyPackaging = false
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
@@ -121,7 +127,7 @@ dependencies {
 
     // Wi-Fi QR codes, UPI QR codes and the PDF417/Aztec block on a boarding pass. The payload
     // is machine-readable and was being thrown away.
-    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
     testImplementation("junit:junit:4.13.2")
 }

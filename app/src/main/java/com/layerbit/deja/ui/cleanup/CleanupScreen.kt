@@ -3,6 +3,7 @@ package com.layerbit.deja.ui.cleanup
 import android.app.Application
 import android.content.IntentSender
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -44,6 +45,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
@@ -221,6 +226,10 @@ fun CleanupScreen(
     var confirmRescan by remember { mutableStateOf(false) }
     var confirmForever by remember { mutableStateOf(false) }
     var showPicker by remember { mutableStateOf(false) }
+
+    // The picker draws in place of this screen rather than as its own destination, so Back has to
+    // be told that closing it is the step back - otherwise it leaves Clean up altogether.
+    BackHandler(enabled = showPicker) { showPicker = false }
 
     val trashLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
@@ -497,7 +506,14 @@ private fun GroupRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .tappable(onClick = onToggleGroup)
+                .semantics {
+                    stateDescription = when (tri) {
+                        Tri.ALL -> "All selected"
+                        Tri.SOME -> "Some selected"
+                        Tri.NONE -> "None selected"
+                    }
+                }
+                .tappable(role = Role.Checkbox, onClick = onToggleGroup)
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -608,7 +624,11 @@ private fun ExpandedTile(
         modifier = modifier
             .aspectRatio(3f / 4f)
             .clip(RoundedCornerShape(9.dp))
-            .tappable(pressScale = 1.04f, onClick = onClick)
+            .semantics {
+                contentDescription = "Screenshot"
+                stateDescription = if (selected) "Will be removed" else "Will be kept"
+            }
+            .tappable(pressScale = 1.04f, role = Role.Checkbox, onClick = onClick)
     ) {
         ShotThumbnail(uri = Uri.parse(shot.uri), size = 160, modifier = Modifier.fillMaxSize())
         if (shot.pinned) {

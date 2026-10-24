@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,6 +53,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
@@ -245,6 +249,9 @@ fun TimelineScreen(
 
     val selecting = selection.isNotEmpty()
 
+    // In multi-select, Back means "stop selecting", not "leave the app with a selection half made".
+    BackHandler(enabled = selecting) { viewModel.clearSelection() }
+
     val trashLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
@@ -273,7 +280,9 @@ fun TimelineScreen(
         }
 
         LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+            // Three across on any phone (360dp and up, after padding); more on tablets and unfolded
+            // foldables instead of three enormous tiles.
+            columns = GridCells.Adaptive(minSize = 100.dp),
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -554,7 +563,11 @@ private fun KeptShelf(shots: List<ShotEntity>, onOpen: (Long) -> Unit) {
                             .width(68.dp)
                             .height(91.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .tappable(pressScale = 1.05f, onClick = { onOpen(shot.id) })
+                            .tappable(
+                                pressScale = 1.05f,
+                                onClickLabel = "Open",
+                                onClick = { onOpen(shot.id) }
+                            )
                     )
                 }
             }
@@ -940,7 +953,16 @@ private fun ShotTile(
         modifier = Modifier
             .aspectRatio(3f / 4f)
             .clip(RoundedCornerShape(11.dp))
-            .tappable(pressScale = 1.04f, onClick = onClick, onLongClick = onLongClick)
+            .semantics {
+                if (selecting) stateDescription = if (selected) "Selected" else "Not selected"
+            }
+            .tappable(
+                pressScale = 1.04f,
+                onClickLabel = if (selecting) "Toggle selection" else "Open",
+                onLongClickLabel = "Select",
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     ) {
         ShotThumbnail(
             uri = Uri.parse(shot.uri),

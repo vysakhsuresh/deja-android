@@ -420,6 +420,7 @@ private fun ZoomableShot(uri: Uri, modifier: Modifier) {
             uri = uri,
             size = 1024,
             contentScale = ContentScale.Fit,
+            contentDescription = "Screenshot",
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {

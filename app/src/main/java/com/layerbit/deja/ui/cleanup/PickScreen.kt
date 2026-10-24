@@ -29,6 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
@@ -127,7 +131,9 @@ fun PickScreen(onDone: () -> Unit, onCancel: () -> Unit, viewModel: PickViewMode
         }
 
         LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+            // Three across on any phone (360dp and up, after padding); more on tablets and unfolded
+            // foldables instead of three enormous tiles.
+            columns = GridCells.Adaptive(minSize = 100.dp),
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -150,7 +156,11 @@ private fun PickTile(shot: ShotEntity, selected: Boolean, onClick: () -> Unit) {
         modifier = Modifier
             .aspectRatio(3f / 4f)
             .clip(RoundedCornerShape(11.dp))
-            .tappable(pressScale = 1.04f, onClick = onClick)
+            .semantics {
+                contentDescription = "Screenshot"
+                stateDescription = if (selected) "Picked for Clean up" else "Not picked"
+            }
+            .tappable(pressScale = 1.04f, role = Role.Checkbox, onClick = onClick)
     ) {
         ShotThumbnail(uri = Uri.parse(shot.uri), modifier = Modifier.fillMaxSize())
         if (shot.pinned) {

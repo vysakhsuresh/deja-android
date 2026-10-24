@@ -367,7 +367,7 @@ private fun ResultCard(shot: ShotEntity, tokens: List<String>, onClick: () -> Un
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(DejaColors.SurfaceDim)
-            .tappable(onClick = onClick)
+            .tappable(onClickLabel = "Open screenshot", onClick = onClick)
             .padding(13.dp)
     ) {
         ShotThumbnail(
