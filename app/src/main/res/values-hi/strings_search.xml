@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">सर्च</string>
+    <string name="search_placeholder">शब्द, कोई ऐप, कोई कैटेगरी…</string>
+    <string name="search_clear_query_cd">मिटाएँ</string>
+    <string name="search_recent_heading">हाल की सर्च</string>
+    <string name="search_clear_recent">मिटाएँ</string>
+    <!-- The example query stays in English in every language: dates are read from English words. -->
+    <string name="search_intro">स्क्रीनशॉट के अंदर के शब्द, वो किस ऐप से आया, और कब लिया गया — आज़माएँ \"receipt last week\"।</string>
+    <string name="search_looking">ढूँढ रहे हैं…</string>
+    <string name="search_no_matches">इस डिवाइस पर कुछ नहीं मिला।</string>
+    <!-- %1$s is a span of time, e.g. "last week". -->
+    <string name="search_no_matches_in">%1$s · इस डिवाइस पर कुछ नहीं मिला।</string>
+    <plurals name="search_matches">
+        <item quantity="one">%1$d नतीजा · इसी डिवाइस पर सर्च किया</item>
+        <item quantity="other">%1$d नतीजे · इसी डिवाइस पर सर्च किया</item>
+    </plurals>
+    <!-- %2$s is a span of time, e.g. "last week". -->
+    <plurals name="search_matches_in">
+        <item quantity="one">%2$s · %1$d नतीजा · इसी डिवाइस पर सर्च किया</item>
+        <item quantity="other">%2$s · %1$d नतीजे · इसी डिवाइस पर सर्च किया</item>
+    </plurals>
+    <string name="search_open_result">स्क्रीनशॉट खोलें</string>
+    <string name="search_kept_cd">सहेजा गया</string>
+    <string name="search_no_readable_text">पढ़ने लायक टेक्स्ट नहीं</string>
+
+    <!-- The span of time understood from a query, shown back to the user -->
+    <string name="search_window_today">आज</string>
+    <string name="search_window_yesterday">कल</string>
+    <string name="search_window_last_week">पिछला हफ़्ता</string>
+    <string name="search_window_this_week">इस हफ़्ते</string>
+    <string name="search_window_last_month">पिछला महीना</string>
+    <string name="search_window_this_month">इस महीने</string>
+    <string name="search_window_recently">हाल ही में</string>
+    <!-- %1$s is a month name, %2$d a year. -->
+    <string name="search_window_month_year">%1$s %2$d</string>
+    <plurals name="search_window_last_days">
+        <item quantity="one">पिछला %1$d दिन</item>
+        <item quantity="other">पिछले %1$d दिन</item>
+    </plurals>
+    <plurals name="search_window_last_weeks">
+        <item quantity="one">पिछला %1$d हफ़्ता</item>
+        <item quantity="other">पिछले %1$d हफ़्ते</item>
+    </plurals>
+    <plurals name="search_window_last_months">
+        <item quantity="one">पिछला %1$d महीना</item>
+        <item quantity="other">पिछले %1$d महीने</item>
+    </plurals>
+    <plurals name="search_window_last_years">
+        <item quantity="one">पिछला %1$d साल</item>
+        <item quantity="other">पिछले %1$d साल</item>
+    </plurals>
+</resources>

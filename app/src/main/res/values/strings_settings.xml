@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Shared components -->
+    <string name="common_back">Back</string>
+    <string name="common_settings_description">Privacy and settings</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_close">Close</string>
+
+    <!-- Bottom bar -->
+    <string name="tab_timeline">Timeline</string>
+    <string name="tab_browse">Browse</string>
+    <string name="tab_clean">Clean</string>
+    <string name="tab_privacy">Privacy</string>
+    <string name="tab_about">About</string>
+
+    <!-- Unfinished-scan prompt at launch -->
+    <string name="resume_title">Finish the last scan?</string>
+    <plurals name="resume_message">
+        <item quantity="one">Deja stopped part way through and has %d screenshot read so far. It can carry on from there, or forget those and read everything again.</item>
+        <item quantity="other">Deja stopped part way through and has %d screenshots read so far. It can carry on from there, or forget those and read everything again.</item>
+    </plurals>
+    <string name="resume_confirm">Resume</string>
+    <string name="resume_start_fresh">Start fresh</string>
+    <string name="resume_not_now">Not now</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_headline">You\'ve already seen it.\nNow you can find it.</string>
+    <string name="onboarding_headline_blocked">Deja needs your\nscreenshots folder.</string>
+    <string name="onboarding_body">Deja reads your screenshots so you can search them in words instead of scrolling for them. To do that it needs to see your Screenshots folder.</string>
+    <string name="onboarding_body_blocked">Android won\'t show the permission prompt again after it has been declined, so it has to be switched on by hand. Open Settings → Permissions → Photos and videos, and choose Allow all.</string>
+    <string name="onboarding_privacy_note">Reading happens entirely on this phone. Deja has no internet permission at all, so nothing it reads can be sent anywhere.</string>
+    <string name="onboarding_choose_folder">Choose the screenshots folder</string>
+    <string name="onboarding_open_settings">Open Deja\'s settings</string>
+    <string name="onboarding_come_back">Already granted it? Come back and Deja will pick it up.</string>
+
+    <!-- Privacy screen -->
+    <string name="privacy_title">Privacy</string>
+    <string name="privacy_notify_blocked_title">Notifications are off for Deja</string>
+    <string name="privacy_notify_blocked_message">Android is blocking Deja\'s notifications, so it can\'t tell you what\'s in a new screenshot. You can allow them in Settings.</string>
+    <string name="privacy_open_settings">Open settings</string>
+    <string name="privacy_export_title">Export what Deja knows</string>
+    <string name="privacy_export_message">Writes everything Deja has read to a JSON file you choose. One-time codes, passwords, and card and ID numbers are left out — including where they appear in the text — unless you choose to include them.</string>
+    <string name="privacy_export_confirm">Export</string>
+    <string name="privacy_export_include">Include them</string>
+    <string name="privacy_scan_running_title">A scan is running</string>
+    <plurals name="privacy_scan_running_progress">
+        <item quantity="one">Deja has read %1$d of %2$d screenshot.</item>
+        <item quantity="other">Deja has read %1$d of %2$d screenshots.</item>
+    </plurals>
+    <string name="privacy_scan_running_rescan">Starting over throws that progress away and reads everything again.</string>
+    <string name="privacy_scan_running_clear">Clearing the index now stops the scan and forgets what it has read so far.</string>
+    <string name="privacy_start_over">Start over</string>
+    <string name="privacy_clear_anyway">Clear anyway</string>
+    <string name="privacy_forget_title">Forget everything Deja read?</string>
+    <plurals name="privacy_forget_message">
+        <item quantity="one">This clears the index of %d screenshot. The screenshot itself stays exactly where it is — Deja would just have to read it again.</item>
+        <item quantity="other">This clears the index of %d screenshots. The screenshots themselves stay exactly where they are — Deja would just have to read them again.</item>
+    </plurals>
+    <string name="privacy_forget_confirm">Forget it all</string>
+    <string name="privacy_no_internet">Deja has no internet permission.</string>
+    <string name="privacy_no_internet_detail">Not a policy you have to trust — a permission the app was never given. It cannot send your screenshots anywhere.</string>
+    <string name="privacy_claim_on_device">Every model runs on this device</string>
+    <string name="privacy_claim_no_account">No account, no sign-in, no cloud backup</string>
+    <string name="privacy_claim_no_analytics">No analytics and no crash reporting</string>
+    <string name="privacy_claim_masked">ID and card numbers stay masked until tapped</string>
+    <string name="privacy_section_new_shots">New screenshots</string>
+    <string name="privacy_notify_title">Tell me what\'s in a new screenshot</string>
+    <string name="privacy_notify_subtitle">Take a screenshot of a code, a Wi-Fi password, a booking or a payment and Deja shows it in a notification with Copy. Read on this phone like everything else; codes stay masked.</string>
+    <string name="privacy_section_appearance">Appearance</string>
+    <string name="privacy_theme_system">Match phone</string>
+    <string name="privacy_theme_dark">Dark</string>
+    <string name="privacy_theme_light">Light</string>
+    <string name="privacy_section_index">The index</string>
+    <string name="privacy_partial_title">Deja can only see the screenshots you picked</string>
+    <string name="privacy_partial_subtitle">Android 14 lets you grant a hand-picked set. Tap to choose more, or allow the whole folder.</string>
+    <string name="privacy_scope_title">What Deja can read</string>
+    <string name="privacy_scope_subtitle">Your Screenshots folder only</string>
+    <string name="privacy_indexed_title">Indexed on this device</string>
+    <string name="privacy_indexed_progress">%1$d of %2$d · still reading</string>
+    <plurals name="privacy_indexed_count">
+        <item quantity="one">%d screenshot</item>
+        <item quantity="other">%d screenshots</item>
+    </plurals>
+    <string name="privacy_stop_title">Stop the scan</string>
+    <string name="privacy_stop_subtitle">Keeps everything read so far. You can resume later.</string>
+    <string name="privacy_resume_title">Resume the scan</string>
+    <string name="privacy_resume_subtitle">The last scan stopped before it finished. This picks up where it left off.</string>
+    <string name="privacy_reread_title">Re-read everything</string>
+    <string name="privacy_reread_subtitle">Scan for screenshots taken or removed since last time</string>
+    <string name="privacy_export_subtitle">Everything Deja has read, as a file you keep. There is nowhere else it could be.</string>
+    <string name="privacy_delete_title">Delete everything Deja knows</string>
+    <string name="privacy_delete_subtitle">Clears the index. Your screenshots themselves stay put.</string>
+    <string name="privacy_footer">Because Deja can\'t go online, we can\'t see how you use it. If something breaks, please tell us — we\'re flying blind on purpose.</string>
+    <plurals name="privacy_exported">
+        <item quantity="one">Exported %d screenshot</item>
+        <item quantity="other">Exported %d screenshots</item>
+    </plurals>
+    <string name="privacy_export_failed">Export failed: %1$s</string>
+    <string name="privacy_export_failed_unknown">could not write the file</string>
+
+    <!-- About screen -->
+    <string name="about_title">About</string>
+    <string name="about_help_title">Get help</string>
+    <string name="about_help_message">Deja collects nothing at all, so a message from you is genuinely the only way we hear about a problem.</string>
+    <string name="about_help_whatsapp">WhatsApp</string>
+    <string name="about_help_email">Email</string>
+    <string name="about_tagline">You\'ve already seen it. Now you can find it.</string>
+    <string name="about_section_library">Your library</string>
+    <!-- The label under the total; the number itself is shown above it. -->
+    <plurals name="about_stat_screenshots" tools:ignore="ImpliedQuantity">
+        <item quantity="one">screenshot</item>
+        <item quantity="other">screenshots</item>
+    </plurals>
+    <string name="about_stat_on_disk">on disk</string>
+    <string name="about_stat_readable">had readable text</string>
+    <string name="about_stat_oldest">oldest one</string>
+    <string name="about_stat_kept">kept for good</string>
+    <string name="about_stat_newest">most recent</string>
+    <string name="about_section_categories">What you screenshot most</string>
+    <string name="about_section_apps">Where they come from</string>
+    <string name="about_apps_note">Read from the filename. Some phones don\'t record the app, so this won\'t cover everything.</string>
+    <string name="about_section_support">Support Deja</string>
+    <string name="about_coffee_title">Buy me a coffee</string>
+    <string name="about_coffee_subtitle">Deja has no ads, no accounts and no tracking. This is the whole business model.</string>
+    <string name="about_help_subtitle">WhatsApp or email — whichever suits you</string>
+    <string name="about_report_title">Report a problem</string>
+    <string name="about_report_subtitle_crash">Emails us the crash log Deja kept on this phone. You see it before it goes.</string>
+    <string name="about_report_subtitle">Emails us your phone model and Android version, and whatever you write.</string>
+    <string name="about_rate_title">Rate Deja</string>
+    <string name="about_rate_subtitle">Ratings are how people find an app that can\'t advertise itself.</string>
+    <string name="about_section_how">How it works</string>
+    <string name="about_how_body">Deja reads the text in each screenshot on your phone and keeps a private index of it, so you can find things by what they say. Reading is done by an on-device model bundled inside the app — nothing is uploaded and nothing is downloaded. It only reads screenshots it hasn\'t seen before, so a full pass is a one-time cost rather than something that happens every launch.</string>
+    <string name="about_privacy_title">Privacy, in detail</string>
+    <string name="about_privacy_subtitle">What Deja can see, and what it can never do</string>
+    <string name="about_version">"Deja %1$s  ·  Powered by "</string>
+</resources>

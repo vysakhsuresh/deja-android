@@ -26,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,10 +36,12 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.BuildConfig
 import com.layerbit.deja.DejaApplication
+import com.layerbit.deja.R
 import com.layerbit.deja.brand.BrandLinks
 import com.layerbit.deja.util.CrashLog
 import com.layerbit.deja.data.db.LibraryStats
 import com.layerbit.deja.data.model.Category
+import com.layerbit.deja.ui.displayName
 import com.layerbit.deja.ui.components.ActionRow
 import com.layerbit.deja.ui.components.DejaBottomBar
 import com.layerbit.deja.ui.components.DejaDialog
@@ -96,15 +100,14 @@ fun AboutScreen(
     // Same two routes LayerLink offers, so getting help from any Layerbit app feels the same.
     if (showHelp) {
         DejaDialog(
-            title = "Get help",
-            message = "Deja collects nothing at all, so a message from you is genuinely the only " +
-                "way we hear about a problem.",
-            confirmLabel = "WhatsApp",
+            title = stringResource(R.string.about_help_title),
+            message = stringResource(R.string.about_help_message),
+            confirmLabel = stringResource(R.string.about_help_whatsapp),
             onConfirm = {
                 showHelp = false
                 BrandLinks.openUrl(context, BrandLinks.WHATSAPP_URL)
             },
-            secondaryLabel = "Email",
+            secondaryLabel = stringResource(R.string.about_help_email),
             onSecondary = {
                 showHelp = false
                 BrandLinks.sendEmail(
@@ -115,13 +118,13 @@ fun AboutScreen(
                         "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
                 )
             },
-            dismissLabel = "Close",
+            dismissLabel = stringResource(R.string.common_close),
             onDismiss = { showHelp = false }
         )
     }
 
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader(title = "About", onBack = onBack)
+        ScreenHeader(title = stringResource(R.string.about_title), onBack = onBack)
 
         Column(
             modifier = Modifier
@@ -137,39 +140,51 @@ fun AboutScreen(
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "You've already seen it. Now you can find it.",
+                text = stringResource(R.string.about_tagline),
                 color = DejaColors.Muted,
                 fontSize = 14.5.sp
             )
 
             Spacer(Modifier.height(24.dp))
-            SectionLabel("Your library")
+            SectionLabel(stringResource(R.string.about_section_library))
             Spacer(Modifier.height(12.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatTile("${stats.total}", "screenshots", Modifier.weight(1f))
-                StatTile(formatBytes(stats.totalBytes), "on disk", Modifier.weight(1f))
+                StatTile(
+                    "${stats.total}",
+                    pluralStringResource(R.plurals.about_stat_screenshots, stats.total),
+                    Modifier.weight(1f)
+                )
+                StatTile(
+                    formatBytes(stats.totalBytes),
+                    stringResource(R.string.about_stat_on_disk),
+                    Modifier.weight(1f)
+                )
             }
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatTile(
                     value = if (stats.total == 0) "—" else "${stats.withText * 100 / stats.total}%",
-                    label = "had readable text",
+                    label = stringResource(R.string.about_stat_readable),
                     modifier = Modifier.weight(1f)
                 )
                 StatTile(
                     value = if (stats.oldestMillis == 0L) "—" else stats.oldestMillis.asMonth(),
-                    label = "oldest one",
+                    label = stringResource(R.string.about_stat_oldest),
                     modifier = Modifier.weight(1f)
                 )
             }
             if (pinnedCount > 0) {
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile("$pinnedCount", "kept for good", Modifier.weight(1f))
+                    StatTile(
+                        "$pinnedCount",
+                        stringResource(R.string.about_stat_kept),
+                        Modifier.weight(1f)
+                    )
                     StatTile(
                         value = if (stats.newestMillis == 0L) "—" else stats.newestMillis.asMonth(),
-                        label = "most recent",
+                        label = stringResource(R.string.about_stat_newest),
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -177,17 +192,17 @@ fun AboutScreen(
 
             if (topCategories.isNotEmpty() && stats.total > 0) {
                 Spacer(Modifier.height(18.dp))
-                SectionLabel("What you screenshot most")
+                SectionLabel(stringResource(R.string.about_section_categories))
                 Spacer(Modifier.height(12.dp))
                 topCategories.forEach { (category, count) ->
-                    ShareRow(category.label, count, count.toFloat() / stats.total)
+                    ShareRow(category.displayName(), count, count.toFloat() / stats.total)
                     Spacer(Modifier.height(9.dp))
                 }
             }
 
             if (topApps.isNotEmpty() && stats.total > 0) {
                 Spacer(Modifier.height(10.dp))
-                SectionLabel("Where they come from")
+                SectionLabel(stringResource(R.string.about_section_apps))
                 Spacer(Modifier.height(12.dp))
                 topApps.forEach { row ->
                     ShareRow(row.sourceApp, row.count, row.count.toFloat() / stats.total)
@@ -195,8 +210,7 @@ fun AboutScreen(
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Read from the filename. Some phones don't record the app, so this " +
-                        "won't cover everything.",
+                    text = stringResource(R.string.about_apps_note),
                     color = DejaColors.Dim,
                     fontSize = 11.5.sp,
                     lineHeight = 16.sp
@@ -204,28 +218,27 @@ fun AboutScreen(
             }
 
             Spacer(Modifier.height(24.dp))
-            SectionLabel("Support Deja")
+            SectionLabel(stringResource(R.string.about_section_support))
             Spacer(Modifier.height(12.dp))
 
             ActionRow(
-                title = "Buy me a coffee",
-                subtitle = "Deja has no ads, no accounts and no tracking. This is the whole " +
-                    "business model.",
+                title = stringResource(R.string.about_coffee_title),
+                subtitle = stringResource(R.string.about_coffee_subtitle),
                 onClick = { BrandLinks.openUrl(context, BrandLinks.COFFEE_URL) }
             )
             Spacer(Modifier.height(10.dp))
             ActionRow(
-                title = "Get help",
-                subtitle = "WhatsApp or email — whichever suits you",
+                title = stringResource(R.string.about_help_title),
+                subtitle = stringResource(R.string.about_help_subtitle),
                 onClick = { showHelp = true }
             )
             Spacer(Modifier.height(10.dp))
             ActionRow(
-                title = "Report a problem",
+                title = stringResource(R.string.about_report_title),
                 subtitle = if (CrashLog.hasEntries(context)) {
-                    "Emails us the crash log Deja kept on this phone. You see it before it goes."
+                    stringResource(R.string.about_report_subtitle_crash)
                 } else {
-                    "Emails us your phone model and Android version, and whatever you write."
+                    stringResource(R.string.about_report_subtitle)
                 },
                 onClick = {
                     BrandLinks.reportProblem(
@@ -239,36 +252,32 @@ fun AboutScreen(
             )
             Spacer(Modifier.height(10.dp))
             ActionRow(
-                title = "Rate Deja",
-                subtitle = "Ratings are how people find an app that can't advertise itself.",
+                title = stringResource(R.string.about_rate_title),
+                subtitle = stringResource(R.string.about_rate_subtitle),
                 onClick = { BrandLinks.openUrl(context, BrandLinks.PLAY_LISTING) }
             )
 
             Spacer(Modifier.height(24.dp))
-            SectionLabel("How it works")
+            SectionLabel(stringResource(R.string.about_section_how))
             Spacer(Modifier.height(12.dp))
 
             Text(
-                text = "Deja reads the text in each screenshot on your phone and keeps a private " +
-                    "index of it, so you can find things by what they say. Reading is done by an " +
-                    "on-device model bundled inside the app — nothing is uploaded and nothing is " +
-                    "downloaded. It only reads screenshots it hasn't seen before, so a full pass " +
-                    "is a one-time cost rather than something that happens every launch.",
+                text = stringResource(R.string.about_how_body),
                 color = DejaColors.Muted,
                 fontSize = 13.5.sp,
                 lineHeight = 21.sp
             )
             Spacer(Modifier.height(12.dp))
             ActionRow(
-                title = "Privacy, in detail",
-                subtitle = "What Deja can see, and what it can never do",
+                title = stringResource(R.string.about_privacy_title),
+                subtitle = stringResource(R.string.about_privacy_subtitle),
                 onClick = { onSelectTab(Tab.PRIVACY) }
             )
 
             Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Deja ${BuildConfig.VERSION_NAME}  ·  Powered by ",
+                    text = stringResource(R.string.about_version, BuildConfig.VERSION_NAME),
                     color = DejaColors.Dim,
                     fontSize = 12.sp
                 )

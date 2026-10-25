@@ -46,6 +46,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,6 +56,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.net.Uri
 import com.layerbit.deja.DejaApplication
+import com.layerbit.deja.R
 import com.layerbit.deja.ambient.AmbientPreferences
 import com.layerbit.deja.ambient.NewScreenshotWorker
 import com.layerbit.deja.data.export.IndexExporter
@@ -102,13 +105,19 @@ class PrivacyViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun export(target: Uri, includeSensitive: Boolean) {
+        val res = getApplication<Application>().resources
         viewModelScope.launch {
             _exported.value = runCatching {
                 val count = withContext(Dispatchers.IO) {
                     IndexExporter.export(getApplication(), target, includeSensitive)
                 }
-                if (count == 1) "Exported 1 screenshot" else "Exported $count screenshots"
-            }.getOrElse { "Export failed: ${it.message ?: "could not write the file"}" }
+                res.getQuantityString(R.plurals.privacy_exported, count, count)
+            }.getOrElse {
+                res.getString(
+                    R.string.privacy_export_failed,
+                    it.message ?: res.getString(R.string.privacy_export_failed_unknown)
+                )
+            }
         }
     }
 
@@ -168,10 +177,9 @@ fun PrivacyScreen(
 
     if (notifyBlocked) {
         DejaDialog(
-            title = "Notifications are off for Deja",
-            message = "Android is blocking Deja's notifications, so it can't tell you what's in a " +
-                "new screenshot. You can allow them in Settings.",
-            confirmLabel = "Open settings",
+            title = stringResource(R.string.privacy_notify_blocked_title),
+            message = stringResource(R.string.privacy_notify_blocked_message),
+            confirmLabel = stringResource(R.string.privacy_open_settings),
             onConfirm = {
                 notifyBlocked = false
                 context.startActivity(
@@ -185,17 +193,15 @@ fun PrivacyScreen(
 
     if (askExport) {
         DejaDialog(
-            title = "Export what Deja knows",
-            message = "Writes everything Deja has read to a JSON file you choose. One-time codes, " +
-                "passwords, and card and ID numbers are left out — including where they appear in " +
-                "the text — unless you choose to include them.",
-            confirmLabel = "Export",
+            title = stringResource(R.string.privacy_export_title),
+            message = stringResource(R.string.privacy_export_message),
+            confirmLabel = stringResource(R.string.privacy_export_confirm),
             onConfirm = {
                 askExport = false
                 exportSensitive = false
                 exportLauncher.launch("deja-index.json")
             },
-            secondaryLabel = "Include them",
+            secondaryLabel = stringResource(R.string.privacy_export_include),
             onSecondary = {
                 askExport = false
                 exportSensitive = true
@@ -210,14 +216,23 @@ fun PrivacyScreen(
     // user decide - they may well have a reason.
     if (pending != Pending.NONE) {
         DejaDialog(
-            title = "A scan is running",
-            message = "Deja has read ${indexing.done} of ${indexing.total} screenshots. " +
+            title = stringResource(R.string.privacy_scan_running_title),
+            message = pluralStringResource(
+                R.plurals.privacy_scan_running_progress,
+                indexing.total,
+                indexing.done,
+                indexing.total
+            ) + " " +
                 if (pending == Pending.RESCAN) {
-                    "Starting over throws that progress away and reads everything again."
+                    stringResource(R.string.privacy_scan_running_rescan)
                 } else {
-                    "Clearing the index now stops the scan and forgets what it has read so far."
+                    stringResource(R.string.privacy_scan_running_clear)
                 },
-            confirmLabel = if (pending == Pending.RESCAN) "Start over" else "Clear anyway",
+            confirmLabel = if (pending == Pending.RESCAN) {
+                stringResource(R.string.privacy_start_over)
+            } else {
+                stringResource(R.string.privacy_clear_anyway)
+            },
             destructive = true,
             onConfirm = {
                 val action = pending
@@ -235,10 +250,9 @@ fun PrivacyScreen(
 
     if (confirmClear) {
         DejaDialog(
-            title = "Forget everything Deja read?",
-            message = "This clears the index of $indexed screenshots. The screenshots themselves " +
-                "stay exactly where they are — Deja would just have to read them again.",
-            confirmLabel = "Forget it all",
+            title = stringResource(R.string.privacy_forget_title),
+            message = pluralStringResource(R.plurals.privacy_forget_message, indexed, indexed),
+            confirmLabel = stringResource(R.string.privacy_forget_confirm),
             destructive = true,
             onConfirm = {
                 confirmClear = false
@@ -249,7 +263,7 @@ fun PrivacyScreen(
     }
 
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader(title = "Privacy", onBack = onBack)
+        ScreenHeader(title = stringResource(R.string.privacy_title), onBack = onBack)
 
         Column(
             modifier = Modifier
@@ -272,7 +286,7 @@ fun PrivacyScreen(
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = "Deja has no internet permission.",
+                    text = stringResource(R.string.privacy_no_internet),
                     color = DejaColors.Text,
                     fontSize = 25.sp,
                     lineHeight = 31.sp,
@@ -280,8 +294,7 @@ fun PrivacyScreen(
                 )
                 Spacer(Modifier.height(11.dp))
                 Text(
-                    text = "Not a policy you have to trust — a permission the app was never " +
-                        "given. It cannot send your screenshots anywhere.",
+                    text = stringResource(R.string.privacy_no_internet_detail),
                     color = DejaColors.Muted,
                     fontSize = 13.5.sp,
                     lineHeight = 20.sp
@@ -290,19 +303,17 @@ fun PrivacyScreen(
 
             Spacer(Modifier.height(18.dp))
 
-            Claim("Every model runs on this device")
-            Claim("No account, no sign-in, no cloud backup")
-            Claim("No analytics and no crash reporting")
-            Claim("ID and card numbers stay masked until tapped")
+            Claim(stringResource(R.string.privacy_claim_on_device))
+            Claim(stringResource(R.string.privacy_claim_no_account))
+            Claim(stringResource(R.string.privacy_claim_no_analytics))
+            Claim(stringResource(R.string.privacy_claim_masked))
 
             Spacer(Modifier.height(16.dp))
-            SectionLabel("New screenshots")
+            SectionLabel(stringResource(R.string.privacy_section_new_shots))
             Spacer(Modifier.height(10.dp))
             ToggleRow(
-                title = "Tell me what's in a new screenshot",
-                subtitle = "Take a screenshot of a code, a Wi-Fi password, a booking or a payment " +
-                    "and Deja shows it in a notification with Copy. Read on this phone like " +
-                    "everything else; codes stay masked.",
+                title = stringResource(R.string.privacy_notify_title),
+                subtitle = stringResource(R.string.privacy_notify_subtitle),
                 checked = notify && ShotNotifier.canPost(context),
                 onChange = { on ->
                     when {
@@ -316,7 +327,7 @@ fun PrivacyScreen(
             )
 
             Spacer(Modifier.height(16.dp))
-            SectionLabel("Appearance")
+            SectionLabel(stringResource(R.string.privacy_section_appearance))
             Spacer(Modifier.height(10.dp))
             ThemePicker(
                 current = theme,
@@ -324,26 +335,28 @@ fun PrivacyScreen(
             )
 
             Spacer(Modifier.height(16.dp))
-            SectionLabel("The index")
+            SectionLabel(stringResource(R.string.privacy_section_index))
             Spacer(Modifier.height(10.dp))
 
             if (partialAccess) {
                 ActionRow(
-                    title = "Deja can only see the screenshots you picked",
-                    subtitle = "Android 14 lets you grant a hand-picked set. Tap to choose more, " +
-                        "or allow the whole folder.",
+                    title = stringResource(R.string.privacy_partial_title),
+                    subtitle = stringResource(R.string.privacy_partial_subtitle),
                     onClick = onRequestMoreAccess
                 )
             } else {
-                InfoCard(title = "What Deja can read", subtitle = "Your Screenshots folder only")
+                InfoCard(
+                    title = stringResource(R.string.privacy_scope_title),
+                    subtitle = stringResource(R.string.privacy_scope_subtitle)
+                )
             }
             Spacer(Modifier.height(10.dp))
             InfoCard(
-                title = "Indexed on this device",
-                subtitle = when {
-                    indexing.running -> "${indexing.done} of ${indexing.total} · still reading"
-                    indexed == 1 -> "1 screenshot"
-                    else -> "$indexed screenshots"
+                title = stringResource(R.string.privacy_indexed_title),
+                subtitle = if (indexing.running) {
+                    stringResource(R.string.privacy_indexed_progress, indexing.done, indexing.total)
+                } else {
+                    pluralStringResource(R.plurals.privacy_indexed_count, indexed, indexed)
                 }
             )
 
@@ -351,8 +364,8 @@ fun PrivacyScreen(
 
             if (indexing.running) {
                 ActionRow(
-                    title = "Stop the scan",
-                    subtitle = "Keeps everything read so far. You can resume later.",
+                    title = stringResource(R.string.privacy_stop_title),
+                    subtitle = stringResource(R.string.privacy_stop_subtitle),
                     onClick = { IndexWorker.stop(context) }
                 )
                 Spacer(Modifier.height(10.dp))
@@ -360,17 +373,16 @@ fun PrivacyScreen(
                 // Always reachable while a scan is unfinished, however the user answered the
                 // prompt at launch - so declining it once can never strand a partial index.
                 ActionRow(
-                    title = "Resume the scan",
-                    subtitle = "The last scan stopped before it finished. This picks up where " +
-                        "it left off.",
+                    title = stringResource(R.string.privacy_resume_title),
+                    subtitle = stringResource(R.string.privacy_resume_subtitle),
                     onClick = { IndexWorker.enqueue(context) }
                 )
                 Spacer(Modifier.height(10.dp))
             }
 
             ActionRow(
-                title = "Re-read everything",
-                subtitle = "Scan for screenshots taken or removed since last time",
+                title = stringResource(R.string.privacy_reread_title),
+                subtitle = stringResource(R.string.privacy_reread_subtitle),
                 onClick = {
                     if (indexing.running) pending = Pending.RESCAN
                     else IndexWorker.restart(context)
@@ -378,15 +390,14 @@ fun PrivacyScreen(
             )
             Spacer(Modifier.height(10.dp))
             ActionRow(
-                title = "Export what Deja knows",
-                subtitle = exported ?: "Everything Deja has read, as a file you keep. There is " +
-                    "nowhere else it could be.",
+                title = stringResource(R.string.privacy_export_title),
+                subtitle = exported ?: stringResource(R.string.privacy_export_subtitle),
                 onClick = { askExport = true }
             )
             Spacer(Modifier.height(10.dp))
             ActionRow(
-                title = "Delete everything Deja knows",
-                subtitle = "Clears the index. Your screenshots themselves stay put.",
+                title = stringResource(R.string.privacy_delete_title),
+                subtitle = stringResource(R.string.privacy_delete_subtitle),
                 tint = DejaColors.Danger,
                 onClick = {
                     if (indexing.running) pending = Pending.CLEAR else confirmClear = true
@@ -396,8 +407,7 @@ fun PrivacyScreen(
             Spacer(Modifier.height(20.dp))
 
             Text(
-                text = "Because Deja can't go online, we can't see how you use it. If something " +
-                    "breaks, please tell us — we're flying blind on purpose.",
+                text = stringResource(R.string.privacy_footer),
                 color = DejaColors.Dim,
                 fontSize = 12.sp,
                 lineHeight = 18.sp
@@ -490,9 +500,9 @@ private fun ThemePicker(current: ThemeChoice, onPick: (ThemeChoice) -> Unit) {
             ) {
                 Text(
                     text = when (choice) {
-                        ThemeChoice.SYSTEM -> "Match phone"
-                        ThemeChoice.DARK -> "Dark"
-                        ThemeChoice.LIGHT -> "Light"
+                        ThemeChoice.SYSTEM -> stringResource(R.string.privacy_theme_system)
+                        ThemeChoice.DARK -> stringResource(R.string.privacy_theme_dark)
+                        ThemeChoice.LIGHT -> stringResource(R.string.privacy_theme_light)
                     },
                     color = if (selected) DejaColors.Amber else DejaColors.Muted,
                     fontSize = 13.5.sp,

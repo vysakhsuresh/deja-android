@@ -16,6 +16,7 @@ import com.layerbit.deja.data.index.SearchPlan
 import com.layerbit.deja.data.index.SearchQuery
 import com.layerbit.deja.data.model.Category
 import com.layerbit.deja.data.model.CleanupGroup
+import com.layerbit.deja.R
 import com.layerbit.deja.ambient.ShotNotifier
 import com.layerbit.deja.widget.Widgets
 import java.util.concurrent.TimeUnit
@@ -143,50 +144,50 @@ class ShotRepository(private val context: Context) {
         return listOf(
             CleanupGroup(
                 id = "old_codes",
-                title = "Old one-time codes",
-                subtitle = "Captured more than a month ago",
+                title = context.getString(R.string.cleanup_group_old_codes_title),
+                subtitle = context.getString(R.string.cleanup_group_old_codes_subtitle),
                 shots = oldCodes,
                 selectedByDefault = true
             ),
             CleanupGroup(
                 id = "old_chatter",
-                title = "Old chatter & forwards",
-                subtitle = "Chats, posts and clips older than six months",
+                title = context.getString(R.string.cleanup_group_old_chatter_title),
+                subtitle = context.getString(R.string.cleanup_group_old_chatter_subtitle),
                 shots = oldChatter,
                 selectedByDefault = true
             ),
             CleanupGroup(
                 id = "duplicates",
-                title = "Exact duplicates",
-                subtitle = "Same contents and size, newest copy kept",
+                title = context.getString(R.string.cleanup_group_duplicates_title),
+                subtitle = context.getString(R.string.cleanup_group_duplicates_subtitle),
                 shots = duplicates,
                 selectedByDefault = false
             ),
             CleanupGroup(
                 id = "near_duplicates",
-                title = "Near-identical shots",
-                subtitle = "The same screen captured more than once",
+                title = context.getString(R.string.cleanup_group_near_duplicates_title),
+                subtitle = context.getString(R.string.cleanup_group_near_duplicates_subtitle),
                 shots = nearDuplicates,
                 selectedByDefault = false
             ),
             CleanupGroup(
                 id = "unreadable",
-                title = "No readable text",
-                subtitle = "Nothing Deja could read out of these",
+                title = context.getString(R.string.cleanup_group_unreadable_title),
+                subtitle = context.getString(R.string.cleanup_group_unreadable_subtitle),
                 shots = unreadable,
                 selectedByDefault = false
             ),
             CleanupGroup(
                 id = "ancient",
-                title = "Older than a year",
-                subtitle = "Everything else from before last year",
+                title = context.getString(R.string.cleanup_group_ancient_title),
+                subtitle = context.getString(R.string.cleanup_group_ancient_subtitle),
                 shots = ancient,
                 selectedByDefault = false
             ),
             CleanupGroup(
                 id = "large",
-                title = "Largest screenshots",
-                subtitle = "Over 2 MB each - check these before removing",
+                title = context.getString(R.string.cleanup_group_large_title),
+                subtitle = context.getString(R.string.cleanup_group_large_subtitle),
                 shots = large,
                 selectedByDefault = false
             )

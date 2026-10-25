@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_receipt">Payments &amp; bills</string>
+    <string name="category_banking">Bank &amp; money</string>
+    <string name="category_ticket">Tickets &amp; travel</string>
+    <string name="category_code">Codes &amp; passwords</string>
+    <string name="category_identity">IDs &amp; documents</string>
+    <string name="category_contact">People &amp; contacts</string>
+    <string name="category_chat">Conversations</string>
+    <string name="category_shopping">Shopping</string>
+    <string name="category_place">Places &amp; maps</string>
+    <string name="category_food">Food &amp; recipes</string>
+    <string name="category_work">Work &amp; study</string>
+    <string name="category_social">Social &amp; posts</string>
+    <string name="category_media">Watch &amp; listen</string>
+    <string name="category_health">Health</string>
+    <string name="category_other">Everything else</string>
+
+    <string name="entity_code">One-time code</string>
+    <string name="entity_wifi_network">Wi-Fi network</string>
+    <string name="entity_wifi_password">Wi-Fi password</string>
+    <string name="entity_card">Card number</string>
+    <string name="entity_aadhaar">Aadhaar</string>
+    <string name="entity_pan">PAN</string>
+    <string name="entity_passport">Passport</string>
+    <string name="entity_voter_id">Voter ID</string>
+    <string name="entity_driving_licence">Driving licence</string>
+    <string name="entity_account_number">Account number</string>
+    <string name="entity_ifsc">IFSC</string>
+    <string name="entity_gstin">GSTIN</string>
+    <string name="entity_upi_id">UPI ID</string>
+    <string name="entity_amount">Amount</string>
+    <string name="entity_date">Date</string>
+    <string name="entity_booking_ref">Booking ref</string>
+    <string name="entity_flight">Flight</string>
+    <string name="entity_time">Time</string>
+    <string name="entity_vehicle">Vehicle number</string>
+    <string name="entity_phone">Phone</string>
+    <string name="entity_email">Email</string>
+    <string name="entity_handle">Username</string>
+    <string name="entity_link">Link</string>
+</resources>

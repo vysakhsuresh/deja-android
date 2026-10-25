@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -39,6 +40,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.DejaApplication
+import com.layerbit.deja.R
 import com.layerbit.deja.data.db.ShotEntity
 import com.layerbit.deja.ui.components.ScreenHeader
 import com.layerbit.deja.ui.components.ShotThumbnail
@@ -91,7 +93,7 @@ fun PickScreen(onDone: () -> Unit, onCancel: () -> Unit, viewModel: PickViewMode
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(
-            title = "Pick screenshots",
+            title = stringResource(R.string.pick_title),
             onBack = onCancel,
             trailing = {
                 Box(
@@ -106,7 +108,11 @@ fun PickScreen(onDone: () -> Unit, onCancel: () -> Unit, viewModel: PickViewMode
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (selected.isEmpty()) "Done" else "Done · ${selected.size}",
+                        text = if (selected.isEmpty()) {
+                            stringResource(R.string.pick_done)
+                        } else {
+                            stringResource(R.string.pick_done_count, selected.size)
+                        },
                         color = DejaColors.Amber,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold
@@ -115,8 +121,7 @@ fun PickScreen(onDone: () -> Unit, onCancel: () -> Unit, viewModel: PickViewMode
             }
         )
         Text(
-            text = "Tap any screenshot to select it for Clean up. Nothing is removed on this " +
-                "screen. A star means you marked it as kept — picking it here overrides that.",
+            text = stringResource(R.string.pick_hint),
             color = DejaColors.Dim,
             fontSize = 12.5.sp,
             lineHeight = 18.sp,
@@ -125,7 +130,7 @@ fun PickScreen(onDone: () -> Unit, onCancel: () -> Unit, viewModel: PickViewMode
 
         if (shots.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "Nothing indexed yet", color = DejaColors.Muted, fontSize = 14.sp)
+                Text(text = stringResource(R.string.pick_empty), color = DejaColors.Muted, fontSize = 14.sp)
             }
             return
         }
@@ -152,13 +157,17 @@ fun PickScreen(onDone: () -> Unit, onCancel: () -> Unit, viewModel: PickViewMode
 
 @Composable
 private fun PickTile(shot: ShotEntity, selected: Boolean, onClick: () -> Unit) {
+    val tileDescription = stringResource(R.string.pick_screenshot)
+    val tileState = stringResource(
+        if (selected) R.string.pick_state_picked else R.string.pick_state_not_picked
+    )
     Box(
         modifier = Modifier
             .aspectRatio(3f / 4f)
             .clip(RoundedCornerShape(11.dp))
             .semantics {
-                contentDescription = "Screenshot"
-                stateDescription = if (selected) "Picked for Clean up" else "Not picked"
+                contentDescription = tileDescription
+                stateDescription = tileState
             }
             .tappable(pressScale = 1.04f, role = Role.Checkbox, onClick = onClick)
     ) {
@@ -177,7 +186,7 @@ private fun PickTile(shot: ShotEntity, selected: Boolean, onClick: () -> Unit) {
             ) {
                 Icon(
                     imageVector = Icons.Filled.Star,
-                    contentDescription = "Kept",
+                    contentDescription = stringResource(R.string.pick_kept),
                     tint = DejaColors.Amber,
                     modifier = Modifier.size(12.dp)
                 )

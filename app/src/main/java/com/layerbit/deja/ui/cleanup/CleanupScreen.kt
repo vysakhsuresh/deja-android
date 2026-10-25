@@ -44,6 +44,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -55,6 +57,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.DejaApplication
+import com.layerbit.deja.R
 import com.layerbit.deja.data.db.ShotEntity
 import com.layerbit.deja.data.index.IndexWorker
 import com.layerbit.deja.data.index.IndexingState
@@ -123,8 +126,8 @@ class CleanupViewModel(app: Application) : AndroidViewModel(app) {
             val manualGroup = manualPicks.takeIf { it.isNotEmpty() }?.let {
                 CleanupGroup(
                     id = MANUAL_GROUP_ID,
-                    title = "Your picks",
-                    subtitle = "Chosen on the picker screen",
+                    title = getApplication<Application>().getString(R.string.cleanup_group_manual_title),
+                    subtitle = getApplication<Application>().getString(R.string.cleanup_group_manual_subtitle),
                     shots = it,
                     selectedByDefault = true
                 )
@@ -260,10 +263,14 @@ fun CleanupScreen(
 
     if (confirmRescan) {
         DejaDialog(
-            title = "A scan is already running",
-            message = "Deja has read ${indexing.done} of ${indexing.total} screenshots. " +
-                "Starting again from the top throws that progress away and re-reads everything.",
-            confirmLabel = "Start over anyway",
+            title = stringResource(R.string.cleanup_rescan_title),
+            message = pluralStringResource(
+                R.plurals.cleanup_rescan_message,
+                indexing.total,
+                indexing.done,
+                indexing.total
+            ),
+            confirmLabel = stringResource(R.string.cleanup_rescan_confirm),
             destructive = true,
             onConfirm = {
                 confirmRescan = false
@@ -275,10 +282,14 @@ fun CleanupScreen(
 
     if (confirmForever) {
         DejaDialog(
-            title = "Delete permanently?",
-            message = "${state.selectedShots.size} screenshots, ${formatBytes(state.selectedBytes)}" +
-                " total. This skips the trash entirely - there is no undo and no recovery.",
-            confirmLabel = "Delete forever",
+            title = stringResource(R.string.cleanup_forever_title),
+            message = pluralStringResource(
+                R.plurals.cleanup_forever_message,
+                state.selectedShots.size,
+                state.selectedShots.size,
+                formatBytes(state.selectedBytes)
+            ),
+            confirmLabel = stringResource(R.string.cleanup_forever_confirm),
             destructive = true,
             onConfirm = {
                 confirmForever = false
@@ -292,7 +303,7 @@ fun CleanupScreen(
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(
-            title = "Clean up",
+            title = stringResource(R.string.cleanup_title),
             onBack = onBack,
             trailing = {
                 Box(
@@ -306,7 +317,7 @@ fun CleanupScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Refresh,
-                        contentDescription = "Scan again",
+                        contentDescription = stringResource(R.string.cleanup_scan_again),
                         tint = DejaColors.Muted,
                         modifier = Modifier.size(22.dp)
                     )
@@ -330,10 +341,9 @@ fun CleanupScreen(
                     Spacer(Modifier.height(6.dp))
                     Text(
                         text = when {
-                            state.loading -> "Working out what's safe to remove…"
-                            indexing.running -> "Still reading — this will grow as Deja catches up"
-                            else -> "Tap a group to include or exclude it, or open one to choose " +
-                                "individual screenshots"
+                            state.loading -> stringResource(R.string.cleanup_status_loading)
+                            indexing.running -> stringResource(R.string.cleanup_status_indexing)
+                            else -> stringResource(R.string.cleanup_status_hint)
                         },
                         color = DejaColors.Dim,
                         fontSize = 12.5.sp,
@@ -350,7 +360,11 @@ fun CleanupScreen(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "$pinnedCount kept — never offered here",
+                                text = pluralStringResource(
+                                    R.plurals.cleanup_pinned_kept,
+                                    pinnedCount,
+                                    pinnedCount
+                                ),
                                 color = DejaColors.Amber,
                                 fontSize = 12.sp
                             )
@@ -359,7 +373,7 @@ fun CleanupScreen(
                     state.freedBytes?.let {
                         Spacer(Modifier.height(10.dp))
                         Text(
-                            text = "${formatBytes(it)} removed",
+                            text = stringResource(R.string.cleanup_freed, formatBytes(it)),
                             color = DejaColors.Green,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium
@@ -368,15 +382,18 @@ fun CleanupScreen(
                     Spacer(Modifier.height(14.dp))
 
                     ActionRow(
-                        title = "Pick screenshots yourself",
-                        subtitle = "Browse everything and choose exactly what goes",
+                        title = stringResource(R.string.cleanup_pick_title),
+                        subtitle = stringResource(R.string.cleanup_pick_subtitle),
                         onClick = { showPicker = true }
                     )
 
                     if (state.groups.isNotEmpty()) {
                         Spacer(Modifier.height(14.dp))
                         Text(
-                            text = if (state.allSelected) "Clear all" else "Select all groups",
+                            text = stringResource(
+                                if (state.allSelected) R.string.cleanup_clear_all
+                                else R.string.cleanup_select_all
+                            ),
                             color = DejaColors.Amber,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
@@ -404,7 +421,7 @@ fun CleanupScreen(
             if (!state.loading && state.groups.isEmpty()) {
                 item {
                     Text(
-                        text = "Nothing to clean up. Your screenshots folder is already tidy.",
+                        text = stringResource(R.string.cleanup_empty),
                         color = DejaColors.Muted,
                         fontSize = 13.5.sp
                     )
@@ -416,8 +433,7 @@ fun CleanupScreen(
             val enabled = state.selectedShots.isNotEmpty()
             Column(Modifier.padding(horizontal = 20.dp)) {
                 Text(
-                    text = "\"Move to trash\" is recoverable from your gallery's trash. " +
-                        "\"Delete forever\" is not.",
+                    text = stringResource(R.string.cleanup_trash_explainer),
                     color = DejaColors.Dim,
                     fontSize = 12.sp,
                     lineHeight = 17.sp
@@ -438,10 +454,14 @@ fun CleanupScreen(
                 ) {
                     Text(
                         text = if (enabled) {
-                            "Move to trash · ${formatBytes(state.selectedBytes)} · " +
-                                "${state.selectedShots.size} screenshots"
+                            pluralStringResource(
+                                R.plurals.cleanup_trash_button,
+                                state.selectedShots.size,
+                                formatBytes(state.selectedBytes),
+                                state.selectedShots.size
+                            )
                         } else {
-                            "Nothing selected"
+                            stringResource(R.string.cleanup_nothing_selected)
                         },
                         color = if (enabled) DejaColors.OnAmber else DejaColors.Dim,
                         fontSize = 15.sp,
@@ -458,7 +478,7 @@ fun CleanupScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Delete forever instead — skips the trash, cannot be undone",
+                        text = stringResource(R.string.cleanup_forever_button),
                         color = if (enabled) DejaColors.Danger else DejaColors.Dim,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
@@ -496,6 +516,13 @@ private fun GroupRow(
 ) {
     val tri = triState(group, selectedIds)
     val selectedInGroup = group.shots.count { it.id in selectedIds }
+    val triDescription = stringResource(
+        when (tri) {
+            Tri.ALL -> R.string.cleanup_state_all_selected
+            Tri.SOME -> R.string.cleanup_state_some_selected
+            Tri.NONE -> R.string.cleanup_state_none_selected
+        }
+    )
 
     Column(
         modifier = Modifier
@@ -507,11 +534,7 @@ private fun GroupRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .semantics {
-                    stateDescription = when (tri) {
-                        Tri.ALL -> "All selected"
-                        Tri.SOME -> "Some selected"
-                        Tri.NONE -> "None selected"
-                    }
+                    stateDescription = triDescription
                 }
                 .tappable(role = Role.Checkbox, onClick = onToggleGroup)
                 .padding(14.dp),
@@ -552,9 +575,19 @@ private fun GroupRow(
                 Spacer(Modifier.height(3.dp))
                 Text(
                     text = if (tri == Tri.SOME) {
-                        "$selectedInGroup of ${group.count} selected · ${formatBytes(group.bytes)}"
+                        stringResource(
+                            R.string.cleanup_group_partial,
+                            selectedInGroup,
+                            group.count,
+                            formatBytes(group.bytes)
+                        )
                     } else {
-                        "${group.count} · ${formatBytes(group.bytes)} · ${group.subtitle}"
+                        stringResource(
+                            R.string.cleanup_group_summary,
+                            group.count,
+                            formatBytes(group.bytes),
+                            group.subtitle
+                        )
                     },
                     color = DejaColors.Dim,
                     fontSize = 12.sp,
@@ -582,7 +615,9 @@ private fun GroupRow(
             ) {
                 Icon(
                     imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                    contentDescription = if (expanded) "Collapse" else "Choose individually",
+                    contentDescription = stringResource(
+                        if (expanded) R.string.cleanup_collapse else R.string.cleanup_choose_individually
+                    ),
                     tint = DejaColors.Dim
                 )
             }
@@ -620,13 +655,17 @@ private fun ExpandedTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val tileDescription = stringResource(R.string.cleanup_screenshot)
+    val tileState = stringResource(
+        if (selected) R.string.cleanup_will_be_removed else R.string.cleanup_will_be_kept
+    )
     Box(
         modifier = modifier
             .aspectRatio(3f / 4f)
             .clip(RoundedCornerShape(9.dp))
             .semantics {
-                contentDescription = "Screenshot"
-                stateDescription = if (selected) "Will be removed" else "Will be kept"
+                contentDescription = tileDescription
+                stateDescription = tileState
             }
             .tappable(pressScale = 1.04f, role = Role.Checkbox, onClick = onClick)
     ) {
@@ -643,7 +682,7 @@ private fun ExpandedTile(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Star,
-                    contentDescription = "Kept",
+                    contentDescription = stringResource(R.string.cleanup_kept),
                     tint = DejaColors.Amber,
                     modifier = Modifier.size(10.dp)
                 )

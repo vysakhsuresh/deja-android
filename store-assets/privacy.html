@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deja privacy policy</title>
+<meta name="description" content="Deja declares no internet permission. Everything it reads stays on your phone.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ground: #f6f1ea; --surface: #fffbf6; --ink: #1c1814; --muted: #5e554b;
+    --line: #e2d8cb; --accent: #a0650b; --ok: #2b7d54; --ok-soft: #dcefe3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0e0d0c; --surface: #151312; --ink: #f5f1ec; --muted: #a79e94;
+      --line: #262220; --accent: #e8a33d; --ok: #58c08c; --ok-soft: #16301f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font: 16px/1.65 "Space Grotesk", system-ui, sans-serif;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 48px 16px 72px; }
+  .mark { font-size: 32px; font-weight: 700; letter-spacing: -1px; margin: 0; }
+  .mark span { color: var(--accent); }
+  .updated { color: var(--muted); font-size: 14px; margin: 4px 0 32px; }
+  .claim {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+    padding: 22px; margin-bottom: 36px;
+  }
+  .claim strong { display: block; font-size: 24px; line-height: 1.25; margin-bottom: 8px; }
+  .claim .ok {
+    display: inline-block; background: var(--ok-soft); color: var(--ok);
+    border-radius: 999px; padding: 2px 12px; font-size: 13px; font-weight: 600; margin-bottom: 12px;
+  }
+  h2 { font-size: 20px; margin: 36px 0 8px; letter-spacing: -0.3px; }
+  p, li { color: var(--ink); }
+  .muted { color: var(--muted); }
+  ul { padding-left: 20px; }
+  li { margin: 6px 0; }
+  code { font-size: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+  a { color: var(--accent); }
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="mark">deja<span>.</span></p>
+  <p class="updated">Privacy policy · last updated 25 October 2026</p>
+
+  <div class="claim">
+    <span class="ok">Checkable on the Play Store listing</span>
+    <strong>Deja has no internet permission.</strong>
+    It does not collect, transmit or share any personal data. There is no account, no
+    analytics, no advertising, no crash reporting and no server to send anything to.
+  </div>
+
+  <p>This is not a promise that rests on good intentions. Deja declares no internet
+  permission, and explicitly removes the network permissions its libraries would otherwise
+  have added. An app without that permission is prevented by Android itself from opening a
+  network connection. You can check this on the Play Store listing ("About this app" → "App
+  permissions") and in your phone's Settings.</p>
+
+  <h2>What Deja reads</h2>
+  <p>Deja reads the screenshots on your phone — the Screenshots folder, and nothing else in
+  your photo library — so you can search them by what they say. If you share an image into
+  Deja from another app, Deja reads that image too.</p>
+  <p>All reading happens on your device, using text-recognition and barcode models that ship
+  inside the app. Nothing is uploaded and nothing is downloaded: Deja works the same in
+  aeroplane mode.</p>
+
+  <h2>What Deja stores, and where</h2>
+  <p>Everything Deja keeps is stored on your device, in the app's own private storage, which
+  no other app can read.</p>
+  <ul>
+    <li><strong>The index</strong> — the text read from each screenshot, where on the screen
+      each line was, what Deja found in it (for example an amount, a booking reference or a
+      one-time code), the category it was sorted into, a small fingerprint used to spot
+      duplicates, and whether you starred it to keep.</li>
+    <li><strong>Search history</strong> — the last eight searches that found something.</li>
+    <li><strong>Settings</strong> — your theme choice, whether new-screenshot notifications
+      are on, and bookkeeping about the last scan.</li>
+    <li><strong>A crash log</strong> — if Deja crashes, the technical error report (no
+      screenshot content) is kept on the phone so you can choose to send it to us. It is
+      never sent automatically.</li>
+  </ul>
+  <p>Images you share into Deja are saved to the <code>Pictures/Deja</code> folder on your
+  phone so they stay available after the app you shared from closes. They are ordinary
+  photos in your gallery: you can delete them there, or from Deja's Clean up screen.</p>
+  <p>Sensitive values — one-time codes, Wi-Fi passwords, card, Aadhaar, PAN, passport and
+  other ID numbers — are kept out of the search index and are masked on screen until you
+  tap them.</p>
+
+  <h2>Deleting it</h2>
+  <p><strong>Privacy → "Delete everything Deja knows"</strong> wipes the index, the search
+  history and the crash log in one step. Your screenshots themselves are not touched.
+  Uninstalling Deja also deletes everything it stored.</p>
+  <p>Android's automatic backup is switched off for Deja, so the index is not copied to your
+  Google account.</p>
+
+  <h2>Exporting it</h2>
+  <p><strong>Privacy → "Export what Deja knows"</strong> writes the whole index to a file at
+  a location you choose. Sensitive values are left out of the export unless you choose to
+  include them. That file is yours; if you save it to a folder a cloud service syncs, that
+  service's own privacy policy applies to its copy.</p>
+
+  <h2>Permissions, and why</h2>
+  <ul>
+    <li><strong>Photos and videos (images only)</strong> — to read your screenshots. On
+      Android 14 and later you can allow only selected photos instead; Deja then reads just
+      those, and lets you add more at any time.</li>
+    <li><strong>Notifications</strong> — only if you switch on "Tell me what's in a new
+      screenshot" in the Privacy screen. It is off until you turn it on. The notification is
+      created on your device; nothing is received from anywhere.</li>
+    <li><strong>Run in the background / after restart</strong> — so a scan of a large
+      library can finish after you leave the app, and so the new-screenshot notification
+      keeps working after a reboot. These grant no access to anything outside your phone.</li>
+  </ul>
+  <p>Deja has no internet permission.</p>
+
+  <h2>Contacting us</h2>
+  <p>If you write to us — from "Get help" or "Report a problem" in the app — your own email
+  or WhatsApp app sends the message, and you see exactly what is in it before it goes. We
+  use it only to answer you.</p>
+
+  <h2>Children</h2>
+  <p>Deja does not collect data from anyone, including children.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, the new version will be published at this address with a new
+  date at the top. Because Deja cannot connect to the internet, no update to this policy can
+  ever add data collection to the version of the app you already have.</p>
+
+  <footer>
+    Layerbit AI · <a href="mailto:ceo@layerbit.co.in">ceo@layerbit.co.in</a> ·
+    <a href="https://layerbit.co.in">layerbit.co.in</a>
+  </footer>
+</main>
+</body>
+</html>

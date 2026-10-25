@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="category_receipt">भुगतान और बिल</string>
+    <string name="category_banking">बैंक और पैसा</string>
+    <string name="category_ticket">टिकट और यात्रा</string>
+    <string name="category_code">कोड और पासवर्ड</string>
+    <string name="category_identity">पहचान पत्र और दस्तावेज़</string>
+    <string name="category_contact">लोग और संपर्क</string>
+    <string name="category_chat">बातचीत</string>
+    <string name="category_shopping">ख़रीदारी</string>
+    <string name="category_place">जगहें और नक़्शे</string>
+    <string name="category_food">खाना और रेसिपी</string>
+    <string name="category_work">काम और पढ़ाई</string>
+    <string name="category_social">सोशल और पोस्ट</string>
+    <string name="category_media">देखें और सुनें</string>
+    <string name="category_health">सेहत</string>
+    <string name="category_other">बाक़ी सब</string>
+
+    <string name="entity_code">वन-टाइम कोड</string>
+    <string name="entity_wifi_network">वाई-फ़ाई नेटवर्क</string>
+    <string name="entity_wifi_password">वाई-फ़ाई पासवर्ड</string>
+    <string name="entity_card">कार्ड नंबर</string>
+    <string name="entity_aadhaar">आधार</string>
+    <string name="entity_pan">पैन</string>
+    <string name="entity_passport">पासपोर्ट</string>
+    <string name="entity_voter_id">वोटर आईडी</string>
+    <string name="entity_driving_licence">ड्राइविंग लाइसेंस</string>
+    <string name="entity_account_number">खाता संख्या</string>
+    <string name="entity_ifsc">IFSC</string>
+    <string name="entity_gstin">GSTIN</string>
+    <string name="entity_upi_id">UPI आईडी</string>
+    <string name="entity_amount">राशि</string>
+    <string name="entity_date">तारीख़</string>
+    <string name="entity_booking_ref">बुकिंग नंबर</string>
+    <string name="entity_flight">फ़्लाइट</string>
+    <string name="entity_time">समय</string>
+    <string name="entity_vehicle">गाड़ी नंबर</string>
+    <string name="entity_phone">फ़ोन</string>
+    <string name="entity_email">ईमेल</string>
+    <string name="entity_handle">यूज़रनेम</string>
+    <string name="entity_link">लिंक</string>
+</resources>

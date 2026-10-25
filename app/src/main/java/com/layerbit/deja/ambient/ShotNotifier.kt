@@ -14,6 +14,7 @@ import com.layerbit.deja.R
 import com.layerbit.deja.data.db.ShotEntity
 import com.layerbit.deja.data.model.EntityType
 import com.layerbit.deja.data.model.Extracted
+import com.layerbit.deja.ui.labelRes
 
 /**
  * Posts "Deja read this" for a screenshot that was just taken.
@@ -113,11 +114,6 @@ object ShotNotifier {
 
     private fun notificationId(shotId: Long): Int = (shotId % Int.MAX_VALUE).toInt()
 
-    fun labelFor(type: EntityType): Int = when (type) {
-        EntityType.CODE -> R.string.entity_code
-        EntityType.WIFI_PASSWORD -> R.string.entity_wifi_password
-        EntityType.BOOKING_REF -> R.string.entity_booking_ref
-        else -> R.string.entity_amount
-    }
+    fun labelFor(type: EntityType): Int = type.labelRes()
 
 }

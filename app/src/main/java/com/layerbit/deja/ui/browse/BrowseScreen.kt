@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,6 +34,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.DejaApplication
+import com.layerbit.deja.R
 import com.layerbit.deja.data.db.AppCount
 import com.layerbit.deja.data.model.Category
 import com.layerbit.deja.ui.components.DejaBottomBar
@@ -41,6 +43,7 @@ import com.layerbit.deja.ui.components.SectionLabel
 import com.layerbit.deja.ui.components.Tab
 import com.layerbit.deja.ui.components.TapTarget
 import com.layerbit.deja.ui.components.tappable
+import com.layerbit.deja.ui.displayName
 import com.layerbit.deja.ui.theme.DejaColors
 import com.layerbit.deja.ui.timeline.TimelineFilter
 import com.layerbit.deja.ui.timeline.TimelineFilterState
@@ -99,7 +102,7 @@ fun BrowseScreen(
     }
 
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader(title = "Browse")
+        ScreenHeader(title = stringResource(R.string.browse_title))
 
         LazyColumn(
             modifier = Modifier.weight(1f),
@@ -108,7 +111,7 @@ fun BrowseScreen(
         ) {
             item {
                 BrowseRow(
-                    label = "All screenshots",
+                    label = stringResource(R.string.browse_all_screenshots),
                     count = total,
                     active = active is TimelineFilter.All,
                     onClick = { pick(TimelineFilter.All) }
@@ -118,7 +121,7 @@ fun BrowseScreen(
             if (pinnedCount > 0) {
                 item {
                     BrowseRow(
-                        label = "Kept",
+                        label = stringResource(R.string.browse_kept),
                         count = pinnedCount,
                         active = active is TimelineFilter.Pinned,
                         onClick = { pick(TimelineFilter.Pinned) }
@@ -128,17 +131,17 @@ fun BrowseScreen(
 
             item {
                 Spacer(Modifier.height(14.dp))
-                SectionLabel("Categories")
+                SectionLabel(stringResource(R.string.browse_section_categories))
                 Spacer(Modifier.height(4.dp))
             }
 
             if (categories.isEmpty()) {
-                item { EmptyNote("Categories appear as Deja reads your screenshots.") }
+                item { EmptyNote(stringResource(R.string.browse_categories_empty)) }
             }
 
             items(categories, key = { it.first.id }) { (category, count) ->
                 BrowseRow(
-                    label = category.label,
+                    label = category.displayName(),
                     count = count,
                     active = active is TimelineFilter.OfCategory && active.category == category,
                     onClick = { pick(TimelineFilter.OfCategory(category)) }
@@ -147,16 +150,13 @@ fun BrowseScreen(
 
             item {
                 Spacer(Modifier.height(14.dp))
-                SectionLabel("Apps")
+                SectionLabel(stringResource(R.string.browse_section_apps))
                 Spacer(Modifier.height(4.dp))
             }
 
             if (apps.isEmpty()) {
                 item {
-                    EmptyNote(
-                        "Deja reads the app name from the screenshot's filename. Some phones " +
-                            "don't record it, so this list can stay empty."
-                    )
+                    EmptyNote(stringResource(R.string.browse_apps_empty))
                 }
             }
 

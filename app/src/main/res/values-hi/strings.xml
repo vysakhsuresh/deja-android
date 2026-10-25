@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- app_name stays "Deja" and comes from the default resources. -->
+
+    <!-- New-screenshot notification -->
+    <string name="notif_channel_name">नए स्क्रीनशॉट</string>
+    <string name="notif_channel_description">आपने अभी जो स्क्रीनशॉट लिया, उसमें Deja ने क्या पढ़ा। सिर्फ़ तभी, जब आप इसे चालू करें।</string>
+    <string name="notif_title">Deja ने यह पढ़ा</string>
+    <string name="notif_public_body">एक नया स्क्रीनशॉट पढ़ा गया</string>
+    <string name="notif_action_copy">कॉपी करें</string>
+    <string name="copied">कॉपी हो गया</string>
+    <string name="copy_gone">वह स्क्रीनशॉट अब Deja में नहीं है</string>
+
+    <!-- Share sheet -->
+    <string name="share_label">Deja से पढ़ें</string>
+    <plurals name="share_reading">
+        <item quantity="one">आपकी शेयर की गई %d इमेज पढ़ी जा रही है…</item>
+        <item quantity="other">आपकी शेयर की गई %d इमेज पढ़ी जा रही हैं…</item>
+    </plurals>
+
+    <!-- Widgets -->
+    <string name="widget_kept_title">सहेजे गए</string>
+    <string name="widget_kept_empty">किसी स्क्रीनशॉट को यहाँ सहेजने के लिए Deja में उसे स्टार करें।</string>
+    <string name="widget_kept_item">सहेजा गया स्क्रीनशॉट</string>
+    <string name="widget_kept_description">आपके स्टार किए गए स्क्रीनशॉट, बस एक टैप दूर</string>
+    <string name="widget_code_title">नया कोड</string>
+    <string name="widget_code_empty">अभी तक कोई वन-टाइम कोड नहीं पढ़ा गया।</string>
+    <string name="widget_code_description">Deja का पढ़ा सबसे नया वन-टाइम कोड, कॉपी बटन के साथ</string>
+
+    <!-- Quick Settings tile -->
+    <string name="tile_label">स्क्रीनशॉट खोजें</string>
+</resources>

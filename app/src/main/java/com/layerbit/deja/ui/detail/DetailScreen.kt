@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,6 +55,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.DejaApplication
+import com.layerbit.deja.R
 import com.layerbit.deja.data.db.ShotEntity
 import com.layerbit.deja.data.model.Category
 import com.layerbit.deja.data.model.Extracted
@@ -64,6 +66,7 @@ import com.layerbit.deja.ui.components.ShotThumbnail
 import com.layerbit.deja.ui.components.TapTarget
 import com.layerbit.deja.ui.components.formatBytes
 import com.layerbit.deja.ui.components.tappable
+import com.layerbit.deja.ui.displayName
 import com.layerbit.deja.ui.theme.DejaColors
 import com.layerbit.deja.ui.timeline.TimelineFilter
 import com.layerbit.deja.ui.timeline.TimelineFilterState
@@ -134,7 +137,11 @@ fun DetailScreen(
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(
-            title = if (run.size > 1) "${pagerState.currentPage + 1} of ${run.size}" else "Screenshot",
+            title = if (run.size > 1) {
+                stringResource(R.string.detail_title_position, pagerState.currentPage + 1, run.size)
+            } else {
+                stringResource(R.string.detail_title)
+            },
             onBack = onBack,
             trailing = {
                 PinButton(
@@ -184,7 +191,11 @@ private fun PinButton(pinned: Boolean, onClick: () -> Unit) {
         // hollow star is not in it - a dim star next to an amber one reads as off/on anyway.
         Icon(
             imageVector = Icons.Filled.Star,
-            contentDescription = if (pinned) "Kept - tap to unkeep" else "Keep this screenshot",
+            contentDescription = if (pinned) {
+                stringResource(R.string.detail_pin_kept_cd)
+            } else {
+                stringResource(R.string.detail_pin_keep_cd)
+            },
             tint = if (pinned) DejaColors.Amber else DejaColors.Dim,
             modifier = Modifier.size(22.dp)
         )
@@ -225,7 +236,7 @@ private fun ShotPage(
 
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Double-tap to zoom",
+            text = stringResource(R.string.detail_zoom_hint),
             color = DejaColors.Dim,
             fontSize = 11.5.sp,
             modifier = Modifier.fillMaxWidth()
@@ -234,10 +245,10 @@ private fun ShotPage(
         Spacer(Modifier.height(12.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SecondaryButton(label = "Share", modifier = Modifier.weight(1f)) {
+            SecondaryButton(label = stringResource(R.string.detail_share), modifier = Modifier.weight(1f)) {
                 context.shareImage(uri)
             }
-            SecondaryButton(label = "Open", modifier = Modifier.weight(1f)) {
+            SecondaryButton(label = stringResource(R.string.detail_open), modifier = Modifier.weight(1f)) {
                 context.viewImage(uri)
             }
         }
@@ -250,17 +261,16 @@ private fun ShotPage(
                 // have no model for" is the kind of small dishonesty that makes an app feel
                 // broken. The distinction costs one line and it is worth having.
                 text = if (unreadable && shot.text.isBlank()) {
-                    "Deja couldn't read any text in this one — either there is none, or it's " +
-                        "in a script it has no model for. The screenshot itself is untouched."
+                    stringResource(R.string.detail_unreadable)
                 } else {
-                    "Deja didn't find anything to act on in this one."
+                    stringResource(R.string.detail_nothing_found)
                 },
                 color = DejaColors.Muted,
                 fontSize = 13.5.sp
             )
         } else {
             Text(
-                text = "Found in this screenshot",
+                text = stringResource(R.string.detail_found_heading),
                 color = DejaColors.Text,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold
@@ -292,8 +302,7 @@ private fun ShotPage(
             if (entities.any { it.type.sensitive }) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "ID and card numbers stay hidden until you tap them. Deja can't " +
-                        "send them anywhere, but a glance over your shoulder is still a thing.",
+                    text = stringResource(R.string.detail_sensitive_note),
                     color = DejaColors.Dim,
                     fontSize = 11.5.sp,
                     lineHeight = 16.sp
@@ -303,17 +312,19 @@ private fun ShotPage(
 
         if (copied) {
             Spacer(Modifier.height(10.dp))
-            Text(text = "Copied", color = DejaColors.Green, fontSize = 12.5.sp)
+            Text(text = stringResource(R.string.detail_copied), color = DejaColors.Green, fontSize = 12.5.sp)
         }
 
         Spacer(Modifier.height(20.dp))
 
+        val devanagari = stringResource(R.string.detail_meta_devanagari)
+        val kept = stringResource(R.string.detail_meta_kept)
         Text(
             text = buildList {
                 add(shot.dateTakenMillis.asReadableDate())
                 add(formatBytes(shot.sizeBytes))
-                if (script == ReadScript.DEVANAGARI) add("Devanagari")
-                if (shot.pinned) add("Kept")
+                if (script == ReadScript.DEVANAGARI) add(devanagari)
+                if (shot.pinned) add(kept)
             }.joinToString("  ·  "),
             color = DejaColors.Dim,
             fontSize = 12.sp
@@ -325,7 +336,7 @@ private fun ShotPage(
         // screenshot usually raises - not "what is this", but "where are the others".
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
-                ContextChip(label = Category.fromId(shot.category).label) {
+                ContextChip(label = Category.fromId(shot.category).displayName()) {
                     TimelineFilterState.set(
                         TimelineFilter.OfCategory(Category.fromId(shot.category))
                     )
@@ -334,7 +345,7 @@ private fun ShotPage(
             }
             if (shot.sourceApp.isNotEmpty()) {
                 item {
-                    ContextChip(label = "All from ${shot.sourceApp}") {
+                    ContextChip(label = stringResource(R.string.detail_all_from_app, shot.sourceApp)) {
                         TimelineFilterState.set(TimelineFilter.FromApp(shot.sourceApp))
                         onOpenTimeline()
                     }
@@ -345,7 +356,11 @@ private fun ShotPage(
         if (shot.text.isNotBlank()) {
             Spacer(Modifier.height(10.dp))
             Text(
-                text = if (showText) "Hide the text Deja read" else "Show the text Deja read",
+                text = if (showText) {
+                    stringResource(R.string.detail_hide_text)
+                } else {
+                    stringResource(R.string.detail_show_text)
+                },
                 color = DejaColors.Amber,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
@@ -420,7 +435,7 @@ private fun ZoomableShot(uri: Uri, modifier: Modifier) {
             uri = uri,
             size = 1024,
             contentScale = ContentScale.Fit,
-            contentDescription = "Screenshot",
+            contentDescription = stringResource(R.string.detail_image_cd),
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
@@ -496,7 +511,7 @@ private fun EntityRow(
                             hidden -> onReveal()
                             single != null -> {
                                 single.perform()
-                                if (single.label == EntityActions.COPY) onCopied()
+                                if (single.isCopy) onCopied()
                             }
                             else -> onToggleExpand()
                         }
@@ -506,7 +521,7 @@ private fun EntityRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = item.type.label,
+                text = item.type.displayName(),
                 color = DejaColors.Dim,
                 fontSize = 13.sp,
                 modifier = Modifier.width(104.dp)
@@ -522,9 +537,10 @@ private fun EntityRow(
             Spacer(Modifier.width(10.dp))
             Text(
                 text = when {
-                    hidden -> "Reveal"
-                    expanded -> "Close"
-                    else -> actions.firstOrNull { it.primary }?.label ?: EntityActions.COPY
+                    hidden -> stringResource(R.string.detail_reveal)
+                    expanded -> stringResource(R.string.detail_close)
+                    else -> actions.firstOrNull { it.primary }?.label
+                        ?: stringResource(R.string.action_copy)
                 },
                 color = DejaColors.Amber,
                 fontSize = 13.sp,
@@ -550,7 +566,7 @@ private fun EntityRow(
                                 .tappable(
                                     onClick = {
                                         action.perform()
-                                        if (action.label == EntityActions.COPY) onCopied()
+                                        if (action.isCopy) onCopied()
                                     }
                                 )
                                 .padding(horizontal = 14.dp),
@@ -584,7 +600,7 @@ private fun Context.shareImage(uri: Uri) {
         putExtra(Intent.EXTRA_STREAM, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    startActivity(Intent.createChooser(intent, "Share screenshot"))
+    startActivity(Intent.createChooser(intent, getString(R.string.detail_share_chooser)))
 }
 
 private fun Context.viewImage(uri: Uri) {

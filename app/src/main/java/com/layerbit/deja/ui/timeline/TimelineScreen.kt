@@ -52,6 +52,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -62,6 +64,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.DejaApplication
+import com.layerbit.deja.R
 import com.layerbit.deja.data.db.AppCount
 import com.layerbit.deja.data.db.ShotEntity
 import com.layerbit.deja.data.index.IndexProgress
@@ -69,6 +72,7 @@ import com.layerbit.deja.data.index.IndexWorker
 import com.layerbit.deja.data.index.IndexingState
 import com.layerbit.deja.data.index.ScanPhase
 import com.layerbit.deja.data.model.Category
+import com.layerbit.deja.ui.displayName
 import com.layerbit.deja.ui.components.AnimatedCount
 import com.layerbit.deja.ui.components.DejaBottomBar
 import com.layerbit.deja.ui.components.ScreenHeader
@@ -189,7 +193,12 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
         if (ids.isEmpty()) return
         viewModelScope.launch {
             repository.setPinned(ids, pin)
-            _justDid.value = if (pin) "Kept ${ids.size}" else "No longer kept"
+            val res = getApplication<Application>().resources
+            _justDid.value = if (pin) {
+                res.getQuantityString(R.plurals.timeline_kept_count, ids.size, ids.size)
+            } else {
+                res.getString(R.string.timeline_no_longer_kept)
+            }
             _selection.value = emptySet()
             refreshReclaimable()
         }
@@ -209,7 +218,9 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             repository.forgetMediaIds(removed.map { it.mediaId })
             DetailContext.remove(removed.mapTo(mutableSetOf()) { it.id })
-            _justDid.value = "${removed.size} moved to trash"
+            _justDid.value = getApplication<Application>().resources.getQuantityString(
+                R.plurals.timeline_moved_to_trash, removed.size, removed.size
+            )
             _selection.value = emptySet()
             refreshReclaimable()
         }
@@ -390,6 +401,7 @@ fun TimelineScreen(
 
 @Composable
 private fun SelectionHeader(count: Int, onClose: () -> Unit, onSelectAll: () -> Unit) {
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -407,7 +419,7 @@ private fun SelectionHeader(count: Int, onClose: () -> Unit, onSelectAll: () -> 
         ) {
             Icon(
                 imageVector = Icons.Filled.Close,
-                contentDescription = "Leave selection",
+                contentDescription = stringResource(R.string.timeline_leave_selection),
                 tint = DejaColors.Text
             )
         }
@@ -417,11 +429,11 @@ private fun SelectionHeader(count: Int, onClose: () -> Unit, onSelectAll: () -> 
             color = DejaColors.Text,
             fontSize = 19.sp,
             fontWeight = FontWeight.Bold,
-            format = { "$it selected" }
+            format = { context.getString(R.string.timeline_selected_count, it) }
         )
         Spacer(Modifier.weight(1f))
         Text(
-            text = "Select all",
+            text = stringResource(R.string.timeline_select_all),
             color = DejaColors.Amber,
             fontSize = 13.5.sp,
             fontWeight = FontWeight.Medium,
@@ -452,21 +464,23 @@ private fun SelectionBar(
     ) {
         BarAction(
             icon = Icons.Filled.Star,
-            label = if (allPinned) "Unkeep" else "Keep",
+            label = stringResource(
+                if (allPinned) R.string.timeline_action_unkeep else R.string.timeline_action_keep
+            ),
             tint = DejaColors.Amber,
             modifier = Modifier.weight(1f),
             onClick = onPin
         )
         BarAction(
             icon = Icons.Filled.Share,
-            label = "Share",
+            label = stringResource(R.string.timeline_action_share),
             tint = DejaColors.Text,
             modifier = Modifier.weight(1f),
             onClick = onShare
         )
         BarAction(
             icon = Icons.Filled.Delete,
-            label = "Trash $count",
+            label = stringResource(R.string.timeline_action_trash, count),
             tint = DejaColors.Danger,
             modifier = Modifier.weight(1f),
             onClick = onTrash
@@ -520,7 +534,7 @@ private fun ActedBar(message: String, onDismiss: () -> Unit) {
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f)
         )
-        Text(text = "Dismiss", color = DejaColors.Dim, fontSize = 12.5.sp)
+        Text(text = stringResource(R.string.timeline_dismiss), color = DejaColors.Dim, fontSize = 12.5.sp)
     }
 }
 
@@ -533,6 +547,8 @@ private fun ActedBar(message: String, onDismiss: () -> Unit) {
  */
 @Composable
 private fun KeptShelf(shots: List<ShotEntity>, onOpen: (Long) -> Unit) {
+    val keptDescription = stringResource(R.string.timeline_kept_screenshot)
+    val openLabel = stringResource(R.string.timeline_open)
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -543,7 +559,7 @@ private fun KeptShelf(shots: List<ShotEntity>, onOpen: (Long) -> Unit) {
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = "Kept",
+                text = stringResource(R.string.timeline_kept),
                 color = DejaColors.Text,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold
@@ -558,14 +574,14 @@ private fun KeptShelf(shots: List<ShotEntity>, onOpen: (Long) -> Unit) {
                     ShotThumbnail(
                         uri = Uri.parse(shot.uri),
                         size = 192,
-                        contentDescription = "Kept screenshot",
+                        contentDescription = keptDescription,
                         modifier = Modifier
                             .width(68.dp)
                             .height(91.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .tappable(
                                 pressScale = 1.05f,
-                                onClickLabel = "Open",
+                                onClickLabel = openLabel,
                                 onClick = { onOpen(shot.id) }
                             )
                     )
@@ -594,7 +610,7 @@ private fun SearchField(onClick: () -> Unit) {
             modifier = Modifier.size(19.dp)
         )
         Spacer(Modifier.size(11.dp))
-        Text(text = "Search your screenshots", color = DejaColors.Dim, fontSize = 15.sp)
+        Text(text = stringResource(R.string.timeline_search_hint), color = DejaColors.Dim, fontSize = 15.sp)
     }
 }
 
@@ -612,6 +628,7 @@ private fun ScanBanner(
 ) {
     val stopped = !progress.running && incomplete
     if (!progress.running && !stopped) return
+    val context = LocalContext.current
 
     Column {
         Column(
@@ -624,12 +641,14 @@ private fun ScanBanner(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = when {
-                            stopped -> "Scan unfinished"
-                            progress.phase == ScanPhase.SCANNING -> "Looking for screenshots"
-                            progress.upgrading -> "Sharpening what Deja already read"
-                            else -> "Reading your screenshots"
-                        },
+                        text = stringResource(
+                            when {
+                                stopped -> R.string.timeline_scan_unfinished
+                                progress.phase == ScanPhase.SCANNING -> R.string.timeline_scan_looking
+                                progress.upgrading -> R.string.timeline_scan_upgrading
+                                else -> R.string.timeline_scan_reading
+                            }
+                        ),
                         color = DejaColors.Text,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
@@ -637,7 +656,10 @@ private fun ScanBanner(
                     Spacer(Modifier.height(4.dp))
                     if (progress.total == 0) {
                         Text(
-                            text = if (stopped) "Pick up where Deja left off" else "Just a moment",
+                            text = stringResource(
+                                if (stopped) R.string.timeline_scan_pick_up
+                                else R.string.timeline_scan_just_a_moment
+                            ),
                             color = DejaColors.Muted,
                             fontSize = 12.5.sp
                         )
@@ -649,7 +671,9 @@ private fun ScanBanner(
                             color = DejaColors.Muted,
                             fontSize = 12.5.sp,
                             format = { done ->
-                                "$done of ${progress.total} re-read · everything stays searchable"
+                                context.getString(
+                                    R.string.timeline_scan_reread_progress, done, progress.total
+                                )
                             }
                         )
                     } else {
@@ -661,10 +685,16 @@ private fun ScanBanner(
                             fontSize = 12.5.sp,
                             format = { done ->
                                 if (stopped) {
-                                    "$done of ${progress.total} read · " +
-                                        "${progress.remaining} to go"
+                                    context.getString(
+                                        R.string.timeline_scan_read_progress_remaining,
+                                        done,
+                                        progress.total,
+                                        progress.remaining
+                                    )
                                 } else {
-                                    "$done of ${progress.total} read"
+                                    context.getString(
+                                        R.string.timeline_scan_read_progress, done, progress.total
+                                    )
                                 }
                             }
                         )
@@ -680,7 +710,9 @@ private fun ScanBanner(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (stopped) "Resume" else "Stop",
+                        text = stringResource(
+                            if (stopped) R.string.timeline_scan_resume else R.string.timeline_scan_stop
+                        ),
                         color = if (stopped) DejaColors.OnAmber else DejaColors.Text,
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.SemiBold
@@ -721,14 +753,14 @@ private fun PartialAccessBanner(onSelectMore: () -> Unit) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(
-                text = "Deja can only see the screenshots you picked",
+                text = stringResource(R.string.timeline_partial_title),
                 color = DejaColors.Text,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
             Spacer(Modifier.height(3.dp))
             Text(
-                text = "Anything else on the phone stays invisible to it.",
+                text = stringResource(R.string.timeline_partial_body),
                 color = DejaColors.Muted,
                 fontSize = 12.5.sp
             )
@@ -743,7 +775,7 @@ private fun PartialAccessBanner(onSelectMore: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Select more",
+                text = stringResource(R.string.timeline_partial_select_more),
                 color = DejaColors.Text,
                 fontSize = 13.5.sp,
                 fontWeight = FontWeight.SemiBold
@@ -771,7 +803,7 @@ private fun ReclaimBanner(bytes: Long, onReview: () -> Unit) {
             )
             Spacer(Modifier.height(3.dp))
             Text(
-                text = "in screenshots you probably don't need",
+                text = stringResource(R.string.timeline_reclaim_body),
                 color = DejaColors.Muted,
                 fontSize = 12.5.sp
             )
@@ -786,7 +818,7 @@ private fun ReclaimBanner(bytes: Long, onReview: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Review",
+                text = stringResource(R.string.timeline_reclaim_review),
                 color = DejaColors.OnAmber,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
@@ -810,7 +842,7 @@ private fun FilterChips(
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
                 Chip(
-                    label = "All",
+                    label = stringResource(R.string.timeline_chip_all),
                     count = total,
                     active = filter is TimelineFilter.All,
                     onClick = { TimelineFilterState.clear() }
@@ -819,7 +851,7 @@ private fun FilterChips(
             if (pinnedCount > 0) {
                 item {
                     Chip(
-                        label = "Kept",
+                        label = stringResource(R.string.timeline_kept),
                         count = pinnedCount,
                         active = filter is TimelineFilter.Pinned,
                         onClick = { TimelineFilterState.togglePinned() },
@@ -830,7 +862,7 @@ private fun FilterChips(
             present.forEach { category ->
                 item {
                     Chip(
-                        label = category.label,
+                        label = category.displayName(),
                         count = counts[category] ?: 0,
                         active = filter is TimelineFilter.OfCategory && filter.category == category,
                         onClick = { TimelineFilterState.toggleCategory(category) }
@@ -871,7 +903,7 @@ private fun BrowseChip(onClick: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "See all",
+            text = stringResource(R.string.timeline_chip_see_all),
             color = DejaColors.Amber,
             fontSize = 13.5.sp,
             fontWeight = FontWeight.Medium
@@ -934,7 +966,7 @@ private fun DayHeader(day: LocalDate, count: Int) {
             modifier = Modifier.weight(1f)
         )
         Text(
-            text = if (count == 1) "1 screenshot" else "$count screenshots",
+            text = pluralStringResource(R.plurals.timeline_day_screenshot_count, count, count),
             color = DejaColors.Dim,
             fontSize = 12.5.sp
         )
@@ -949,24 +981,31 @@ private fun ShotTile(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
+    val selectedState = stringResource(R.string.timeline_state_selected)
+    val notSelectedState = stringResource(R.string.timeline_state_not_selected)
     Box(
         modifier = Modifier
             .aspectRatio(3f / 4f)
             .clip(RoundedCornerShape(11.dp))
             .semantics {
-                if (selecting) stateDescription = if (selected) "Selected" else "Not selected"
+                if (selecting) stateDescription = if (selected) selectedState else notSelectedState
             }
             .tappable(
                 pressScale = 1.04f,
-                onClickLabel = if (selecting) "Toggle selection" else "Open",
-                onLongClickLabel = "Select",
+                onClickLabel = stringResource(
+                    if (selecting) R.string.timeline_toggle_selection else R.string.timeline_open
+                ),
+                onLongClickLabel = stringResource(R.string.timeline_select),
                 onClick = onClick,
                 onLongClick = onLongClick
             )
     ) {
         ShotThumbnail(
             uri = Uri.parse(shot.uri),
-            contentDescription = "Screenshot from ${shot.dateTakenMillis.asTileDate()}",
+            contentDescription = stringResource(
+                R.string.timeline_tile_description,
+                shot.dateTakenMillis.asTileDate()
+            ),
             modifier = Modifier.fillMaxSize()
         )
 
@@ -982,7 +1021,7 @@ private fun ShotTile(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Star,
-                    contentDescription = "Kept",
+                    contentDescription = stringResource(R.string.timeline_kept),
                     tint = DejaColors.Amber,
                     modifier = Modifier.size(11.dp)
                 )
@@ -1023,9 +1062,9 @@ private fun EmptyState(indexing: Boolean, filter: TimelineFilter) {
     Column(Modifier.padding(vertical = 60.dp)) {
         Text(
             text = when {
-                filtered -> "Nothing in ${filter.label}"
-                indexing -> "Still reading…"
-                else -> "Nothing here yet"
+                filtered -> stringResource(R.string.timeline_empty_filtered_title, filter.label)
+                indexing -> stringResource(R.string.timeline_empty_indexing_title)
+                else -> stringResource(R.string.timeline_empty_title)
             },
             color = DejaColors.Text,
             fontSize = 16.sp,
@@ -1033,12 +1072,14 @@ private fun EmptyState(indexing: Boolean, filter: TimelineFilter) {
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = when {
-                filtered && indexing -> "Deja is still reading — this may fill up as it goes."
-                filtered -> "Tap All to see everything again."
-                indexing -> "Screenshots appear as Deja reads them."
-                else -> "Take a screenshot and it will show up here."
-            },
+            text = stringResource(
+                when {
+                    filtered && indexing -> R.string.timeline_empty_filtered_indexing_body
+                    filtered -> R.string.timeline_empty_filtered_body
+                    indexing -> R.string.timeline_empty_indexing_body
+                    else -> R.string.timeline_empty_body
+                }
+            ),
             color = DejaColors.Muted,
             fontSize = 13.5.sp
         )
@@ -1054,7 +1095,7 @@ private fun EmptyState(indexing: Boolean, filter: TimelineFilter) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Show all screenshots",
+                    text = stringResource(R.string.timeline_empty_show_all),
                     color = DejaColors.Text,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
@@ -1079,7 +1120,7 @@ private fun Context.shareAll(uris: List<Uri>) {
         }
     }
     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    runCatching { startActivity(Intent.createChooser(intent, "Share screenshots")) }
+    runCatching { startActivity(Intent.createChooser(intent, getString(R.string.timeline_share_chooser))) }
 }
 
 private fun Long.toLocalDate(): LocalDate =
@@ -1089,11 +1130,12 @@ private val dayFormatter = DateTimeFormatter.ofPattern("d MMM yyyy")
 
 private fun Long.asTileDate(): String = toLocalDate().format(dayFormatter)
 
+@Composable
 private fun LocalDate.friendlyLabel(): String {
     val today = LocalDate.now()
     return when (this) {
-        today -> "Today"
-        today.minusDays(1) -> "Yesterday"
+        today -> stringResource(R.string.timeline_today)
+        today.minusDays(1) -> stringResource(R.string.timeline_yesterday)
         else -> format(dayFormatter)
     }
 }

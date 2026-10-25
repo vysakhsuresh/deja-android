@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Shared components -->
+    <string name="common_back">वापस</string>
+    <string name="common_settings_description">प्राइवेसी और सेटिंग्स</string>
+    <string name="common_cancel">रद्द करें</string>
+    <string name="common_close">बंद करें</string>
+
+    <!-- Bottom bar -->
+    <string name="tab_timeline">टाइमलाइन</string>
+    <string name="tab_browse">ब्राउज़</string>
+    <string name="tab_clean">सफ़ाई</string>
+    <string name="tab_privacy">प्राइवेसी</string>
+    <string name="tab_about">जानकारी</string>
+
+    <!-- Unfinished-scan prompt at launch -->
+    <string name="resume_title">पिछला स्कैन पूरा करें?</string>
+    <plurals name="resume_message">
+        <item quantity="one">Deja बीच में रुक गया था और अब तक %d स्क्रीनशॉट पढ़ चुका है। वह वहीं से आगे पढ़ सकता है, या उन्हें भूलकर सब कुछ फिर से पढ़ सकता है।</item>
+        <item quantity="other">Deja बीच में रुक गया था और अब तक %d स्क्रीनशॉट पढ़ चुका है। वह वहीं से आगे पढ़ सकता है, या उन्हें भूलकर सब कुछ फिर से पढ़ सकता है।</item>
+    </plurals>
+    <string name="resume_confirm">जारी रखें</string>
+    <string name="resume_start_fresh">नए सिरे से शुरू करें</string>
+    <string name="resume_not_now">अभी नहीं</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_headline">आपने इसे पहले देखा है।\nअब आप इसे ढूँढ सकते हैं।</string>
+    <string name="onboarding_headline_blocked">Deja को आपका\nस्क्रीनशॉट फ़ोल्डर चाहिए।</string>
+    <string name="onboarding_body">Deja आपके स्क्रीनशॉट पढ़ता है, ताकि आप उन्हें स्क्रॉल करके खोजने के बजाय शब्दों से सर्च कर सकें। इसके लिए उसे आपका Screenshots फ़ोल्डर देखना होगा।</string>
+    <string name="onboarding_body_blocked">एक बार मना करने के बाद Android अनुमति वाला पॉप-अप दोबारा नहीं दिखाता, इसलिए इसे ख़ुद चालू करना होगा। सेटिंग्स → अनुमतियाँ → फ़ोटो और वीडियो खोलें, और सभी की अनुमति दें चुनें।</string>
+    <string name="onboarding_privacy_note">सब कुछ इसी फ़ोन पर पढ़ा जाता है। Deja के पास इंटरनेट की अनुमति ही नहीं है, इसलिए वह जो भी पढ़ता है, कहीं भेजा नहीं जा सकता।</string>
+    <string name="onboarding_choose_folder">स्क्रीनशॉट फ़ोल्डर चुनें</string>
+    <string name="onboarding_open_settings">Deja की सेटिंग्स खोलें</string>
+    <string name="onboarding_come_back">अनुमति दे दी? वापस आइए, Deja ख़ुद पहचान लेगा।</string>
+
+    <!-- Privacy screen -->
+    <string name="privacy_title">प्राइवेसी</string>
+    <string name="privacy_notify_blocked_title">Deja के नोटिफ़िकेशन बंद हैं</string>
+    <string name="privacy_notify_blocked_message">Android ने Deja के नोटिफ़िकेशन रोक रखे हैं, इसलिए वह नए स्क्रीनशॉट में क्या है, यह नहीं बता सकता। आप सेटिंग्स में इन्हें चालू कर सकते हैं।</string>
+    <string name="privacy_open_settings">सेटिंग्स खोलें</string>
+    <string name="privacy_export_title">Deja की सारी जानकारी एक्सपोर्ट करें</string>
+    <string name="privacy_export_message">Deja ने जो कुछ पढ़ा है, वह सब आपकी चुनी हुई JSON फ़ाइल में लिख देता है। वन-टाइम कोड, पासवर्ड, और कार्ड व आईडी नंबर इसमें शामिल नहीं होते — टेक्स्ट में जहाँ वे आते हैं, वहाँ भी नहीं — जब तक आप उन्हें शामिल करना न चुनें।</string>
+    <string name="privacy_export_confirm">एक्सपोर्ट करें</string>
+    <string name="privacy_export_include">उन्हें भी शामिल करें</string>
+    <string name="privacy_scan_running_title">स्कैन चल रहा है</string>
+    <plurals name="privacy_scan_running_progress">
+        <item quantity="one">Deja %2$d में से %1$d स्क्रीनशॉट पढ़ चुका है।</item>
+        <item quantity="other">Deja %2$d में से %1$d स्क्रीनशॉट पढ़ चुका है।</item>
+    </plurals>
+    <string name="privacy_scan_running_rescan">फिर से शुरू करने पर यह प्रोग्रेस मिट जाएगी और सब कुछ दोबारा पढ़ा जाएगा।</string>
+    <string name="privacy_scan_running_clear">अभी इंडेक्स साफ़ करने से स्कैन रुक जाएगा और अब तक पढ़ा हुआ सब भूल जाएगा।</string>
+    <string name="privacy_start_over">फिर से शुरू करें</string>
+    <string name="privacy_clear_anyway">फिर भी साफ़ करें</string>
+    <string name="privacy_forget_title">Deja ने जो पढ़ा, सब भुला दें?</string>
+    <plurals name="privacy_forget_message">
+        <item quantity="one">इससे %d स्क्रीनशॉट का इंडेक्स साफ़ हो जाएगा। स्क्रीनशॉट जहाँ हैं, वहीं रहेंगे — Deja को बस उन्हें फिर से पढ़ना होगा।</item>
+        <item quantity="other">इससे %d स्क्रीनशॉट का इंडेक्स साफ़ हो जाएगा। स्क्रीनशॉट जहाँ हैं, वहीं रहेंगे — Deja को बस उन्हें फिर से पढ़ना होगा।</item>
+    </plurals>
+    <string name="privacy_forget_confirm">सब भुला दें</string>
+    <string name="privacy_no_internet">Deja के पास इंटरनेट की अनुमति नहीं है।</string>
+    <string name="privacy_no_internet_detail">यह कोई नीति नहीं जिस पर आपको भरोसा करना पड़े — यह अनुमति ऐप को कभी दी ही नहीं गई। यह आपके स्क्रीनशॉट कहीं नहीं भेज सकता।</string>
+    <string name="privacy_claim_on_device">हर मॉडल इसी डिवाइस पर चलता है</string>
+    <string name="privacy_claim_no_account">न अकाउंट, न साइन-इन, न क्लाउड बैकअप</string>
+    <string name="privacy_claim_no_analytics">न एनालिटिक्स, न क्रैश रिपोर्टिंग</string>
+    <string name="privacy_claim_masked">आईडी और कार्ड नंबर टैप करने तक छिपे रहते हैं</string>
+    <string name="privacy_section_new_shots">नए स्क्रीनशॉट</string>
+    <string name="privacy_notify_title">नए स्क्रीनशॉट में क्या है, बताएँ</string>
+    <string name="privacy_notify_subtitle">किसी कोड, वाई-फ़ाई पासवर्ड, बुकिंग या पेमेंट का स्क्रीनशॉट लें, और Deja उसे कॉपी बटन के साथ नोटिफ़िकेशन में दिखाएगा। बाक़ी सब की तरह यह भी इसी फ़ोन पर पढ़ा जाता है; कोड छिपे रहते हैं।</string>
+    <string name="privacy_section_appearance">दिखावट</string>
+    <string name="privacy_theme_system">फ़ोन जैसा</string>
+    <string name="privacy_theme_dark">डार्क</string>
+    <string name="privacy_theme_light">लाइट</string>
+    <string name="privacy_section_index">इंडेक्स</string>
+    <string name="privacy_partial_title">Deja सिर्फ़ आपके चुने हुए स्क्रीनशॉट देख सकता है</string>
+    <string name="privacy_partial_subtitle">Android 14 में आप कुछ चुनी हुई फ़ोटो की अनुमति दे सकते हैं। और चुनने के लिए टैप करें, या पूरे फ़ोल्डर की अनुमति दें।</string>
+    <string name="privacy_scope_title">Deja क्या पढ़ सकता है</string>
+    <string name="privacy_scope_subtitle">सिर्फ़ आपका Screenshots फ़ोल्डर</string>
+    <string name="privacy_indexed_title">इस डिवाइस पर इंडेक्स किए गए</string>
+    <string name="privacy_indexed_progress">%2$d में से %1$d · अभी पढ़ रहा है</string>
+    <plurals name="privacy_indexed_count">
+        <item quantity="one">%d स्क्रीनशॉट</item>
+        <item quantity="other">%d स्क्रीनशॉट</item>
+    </plurals>
+    <string name="privacy_stop_title">स्कैन रोकें</string>
+    <string name="privacy_stop_subtitle">अब तक पढ़ा हुआ सब रहेगा। आप बाद में जारी रख सकते हैं।</string>
+    <string name="privacy_resume_title">स्कैन जारी रखें</string>
+    <string name="privacy_resume_subtitle">पिछला स्कैन पूरा होने से पहले रुक गया था। यह वहीं से आगे शुरू करेगा।</string>
+    <string name="privacy_reread_title">सब कुछ फिर से पढ़ें</string>
+    <string name="privacy_reread_subtitle">पिछली बार के बाद लिए या हटाए गए स्क्रीनशॉट खोजें</string>
+    <string name="privacy_export_subtitle">Deja ने जो कुछ पढ़ा है, एक फ़ाइल में जो आपके पास रहे। यह कहीं और है ही नहीं।</string>
+    <string name="privacy_delete_title">Deja की सारी जानकारी मिटाएँ</string>
+    <string name="privacy_delete_subtitle">इंडेक्स साफ़ हो जाएगा। आपके स्क्रीनशॉट अपनी जगह रहेंगे।</string>
+    <string name="privacy_footer">Deja ऑनलाइन नहीं जा सकता, इसलिए हम नहीं देख सकते कि आप इसे कैसे इस्तेमाल करते हैं। कुछ गड़बड़ हो तो हमें ज़रूर बताएँ — हमने जान-बूझकर अपनी आँखें बंद रखी हैं।</string>
+    <plurals name="privacy_exported">
+        <item quantity="one">%d स्क्रीनशॉट एक्सपोर्ट हुआ</item>
+        <item quantity="other">%d स्क्रीनशॉट एक्सपोर्ट हुए</item>
+    </plurals>
+    <string name="privacy_export_failed">एक्सपोर्ट नहीं हो सका: %1$s</string>
+    <string name="privacy_export_failed_unknown">फ़ाइल लिखी नहीं जा सकी</string>
+
+    <!-- About screen -->
+    <string name="about_title">जानकारी</string>
+    <string name="about_help_title">मदद लें</string>
+    <string name="about_help_message">Deja कुछ भी इकट्ठा नहीं करता, इसलिए किसी दिक़्क़त के बारे में हमें पता चलने का एकमात्र तरीक़ा आपका मैसेज ही है।</string>
+    <string name="about_help_whatsapp">WhatsApp</string>
+    <string name="about_help_email">ईमेल</string>
+    <string name="about_tagline">आपने इसे पहले देखा है। अब आप इसे ढूँढ सकते हैं।</string>
+    <string name="about_section_library">आपकी लाइब्रेरी</string>
+    <!-- The label under the total; the number itself is shown above it. -->
+    <plurals name="about_stat_screenshots" tools:ignore="ImpliedQuantity">
+        <item quantity="one">स्क्रीनशॉट</item>
+        <item quantity="other">स्क्रीनशॉट</item>
+    </plurals>
+    <string name="about_stat_on_disk">स्टोरेज में</string>
+    <string name="about_stat_readable">पढ़ने लायक़ टेक्स्ट वाले</string>
+    <string name="about_stat_oldest">सबसे पुराना</string>
+    <string name="about_stat_kept">हमेशा के लिए सहेजे गए</string>
+    <string name="about_stat_newest">सबसे नया</string>
+    <string name="about_section_categories">आप सबसे ज़्यादा किसके स्क्रीनशॉट लेते हैं</string>
+    <string name="about_section_apps">ये कहाँ से आते हैं</string>
+    <string name="about_apps_note">फ़ाइल के नाम से पता लगाया गया। कुछ फ़ोन ऐप का नाम दर्ज नहीं करते, इसलिए इसमें सब शामिल नहीं होगा।</string>
+    <string name="about_section_support">Deja का साथ दें</string>
+    <string name="about_coffee_title">मुझे एक कॉफ़ी पिलाएँ</string>
+    <string name="about_coffee_subtitle">Deja में न विज्ञापन हैं, न अकाउंट, न ट्रैकिंग। कमाई का बस यही तरीक़ा है।</string>
+    <string name="about_help_subtitle">WhatsApp या ईमेल — जो आपको ठीक लगे</string>
+    <string name="about_report_title">समस्या बताएँ</string>
+    <string name="about_report_subtitle_crash">Deja ने इस फ़ोन पर जो क्रैश लॉग रखा है, वह हमें ईमेल करता है। भेजने से पहले आप उसे देख सकते हैं।</string>
+    <string name="about_report_subtitle">आपके फ़ोन का मॉडल, Android वर्ज़न और आप जो भी लिखें, हमें ईमेल करता है।</string>
+    <string name="about_rate_title">Deja को रेटिंग दें</string>
+    <string name="about_rate_subtitle">जो ऐप अपना विज्ञापन नहीं कर सकता, लोग उसे रेटिंग से ही ढूँढते हैं।</string>
+    <string name="about_section_how">यह कैसे काम करता है</string>
+    <string name="about_how_body">Deja आपके फ़ोन पर हर स्क्रीनशॉट का टेक्स्ट पढ़ता है और उसका एक निजी इंडेक्स रखता है, ताकि आप चीज़ों को उनमें लिखी बातों से ढूँढ सकें। पढ़ने का काम ऐप के अंदर मौजूद ऑन-डिवाइस मॉडल करता है — न कुछ अपलोड होता है, न कुछ डाउनलोड। यह सिर्फ़ वही स्क्रीनशॉट पढ़ता है जो इसने पहले नहीं देखे, इसलिए पूरा स्कैन एक ही बार होता है, हर बार ऐप खोलने पर नहीं।</string>
+    <string name="about_privacy_title">प्राइवेसी, विस्तार से</string>
+    <string name="about_privacy_subtitle">Deja क्या देख सकता है, और क्या कभी नहीं कर सकता</string>
+    <string name="about_version">"Deja %1$s  ·  Powered by "</string>
+</resources>

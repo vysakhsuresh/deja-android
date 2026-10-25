@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Timeline: action confirmations -->
+    <plurals name="timeline_kept_count">
+        <item quantity="one">Kept %1$d</item>
+        <item quantity="other">Kept %1$d</item>
+    </plurals>
+    <string name="timeline_no_longer_kept">No longer kept</string>
+    <plurals name="timeline_moved_to_trash">
+        <item quantity="one">%1$d moved to trash</item>
+        <item quantity="other">%1$d moved to trash</item>
+    </plurals>
+    <string name="timeline_dismiss">Dismiss</string>
+
+    <!-- Timeline: selection mode -->
+    <string name="timeline_leave_selection">Leave selection</string>
+    <string name="timeline_selected_count">%1$d selected</string>
+    <string name="timeline_select_all">Select all</string>
+    <string name="timeline_action_keep">Keep</string>
+    <string name="timeline_action_unkeep">Unkeep</string>
+    <string name="timeline_action_share">Share</string>
+    <string name="timeline_action_trash">Trash %1$d</string>
+    <string name="timeline_share_chooser">Share screenshots</string>
+
+    <!-- Timeline: tiles and the kept shelf -->
+    <string name="timeline_kept">Kept</string>
+    <string name="timeline_kept_screenshot">Kept screenshot</string>
+    <string name="timeline_open">Open</string>
+    <string name="timeline_select">Select</string>
+    <string name="timeline_toggle_selection">Toggle selection</string>
+    <string name="timeline_state_selected">Selected</string>
+    <string name="timeline_state_not_selected">Not selected</string>
+    <string name="timeline_tile_description">Screenshot from %1$s</string>
+
+    <!-- Timeline: search field -->
+    <string name="timeline_search_hint">Search your screenshots</string>
+
+    <!-- Timeline: scan banner -->
+    <string name="timeline_scan_unfinished">Scan unfinished</string>
+    <string name="timeline_scan_looking">Looking for screenshots</string>
+    <string name="timeline_scan_upgrading">Sharpening what Deja already read</string>
+    <string name="timeline_scan_reading">Reading your screenshots</string>
+    <string name="timeline_scan_pick_up">Pick up where Deja left off</string>
+    <string name="timeline_scan_just_a_moment">Just a moment</string>
+    <string name="timeline_scan_reread_progress">%1$d of %2$d re-read · everything stays searchable</string>
+    <string name="timeline_scan_read_progress_remaining">%1$d of %2$d read · %3$d to go</string>
+    <string name="timeline_scan_read_progress">%1$d of %2$d read</string>
+    <string name="timeline_scan_resume">Resume</string>
+    <string name="timeline_scan_stop">Stop</string>
+
+    <!-- Timeline: partial photo access banner -->
+    <string name="timeline_partial_title">Deja can only see the screenshots you picked</string>
+    <string name="timeline_partial_body">Anything else on the phone stays invisible to it.</string>
+    <string name="timeline_partial_select_more">Select more</string>
+
+    <!-- Timeline: reclaimable space banner; shown under a size such as "48 MB" -->
+    <string name="timeline_reclaim_body">in screenshots you probably don\'t need</string>
+    <string name="timeline_reclaim_review">Review</string>
+
+    <!-- Timeline: filter chips -->
+    <string name="timeline_chip_all">All</string>
+    <string name="timeline_chip_see_all">See all</string>
+    <string name="timeline_filter_all">All screenshots</string>
+
+    <!-- Timeline: day headers -->
+    <string name="timeline_today">Today</string>
+    <string name="timeline_yesterday">Yesterday</string>
+    <plurals name="timeline_day_screenshot_count">
+        <item quantity="one">%1$d screenshot</item>
+        <item quantity="other">%1$d screenshots</item>
+    </plurals>
+
+    <!-- Timeline: empty states -->
+    <string name="timeline_empty_filtered_title">Nothing in %1$s</string>
+    <string name="timeline_empty_indexing_title">Still reading…</string>
+    <string name="timeline_empty_title">Nothing here yet</string>
+    <string name="timeline_empty_filtered_indexing_body">Deja is still reading — this may fill up as it goes.</string>
+    <string name="timeline_empty_filtered_body">Tap All to see everything again.</string>
+    <string name="timeline_empty_indexing_body">Screenshots appear as Deja reads them.</string>
+    <string name="timeline_empty_body">Take a screenshot and it will show up here.</string>
+    <string name="timeline_empty_show_all">Show all screenshots</string>
+
+    <!-- Browse -->
+    <string name="browse_title">Browse</string>
+    <string name="browse_all_screenshots">All screenshots</string>
+    <string name="browse_kept">Kept</string>
+    <string name="browse_section_categories">Categories</string>
+    <string name="browse_categories_empty">Categories appear as Deja reads your screenshots.</string>
+    <string name="browse_section_apps">Apps</string>
+    <string name="browse_apps_empty">Deja reads the app name from the screenshot\'s filename. Some phones don\'t record it, so this list can stay empty.</string>
+</resources>

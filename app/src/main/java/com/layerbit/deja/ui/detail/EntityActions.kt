@@ -4,8 +4,10 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.ContactsContract
+import com.layerbit.deja.R
 import com.layerbit.deja.data.model.Extracted
 import com.layerbit.deja.data.model.EntityType
+import com.layerbit.deja.ui.labelRes
 import com.layerbit.deja.util.Clipboard
 
 /**
@@ -20,13 +22,15 @@ data class EntityAction(
     val label: String,
     /** True for the action that is almost always what someone wants, so it can lead the row. */
     val primary: Boolean = false,
+    /**
+     * The one action whose result is invisible unless the UI says so. A flag rather than a
+     * comparison on [label], because the label is translated and would stop matching.
+     */
+    val isCopy: Boolean = false,
     val perform: () -> Unit
 )
 
 object EntityActions {
-
-    /** The one action whose result is invisible unless the UI says so. Shared, not duplicated. */
-    const val COPY = "Copy"
 
     /**
      * @param onFind runs a Deja search for the value. Pulled out as a callback rather than an
@@ -44,13 +48,13 @@ object EntityActions {
             EntityType.PHONE -> {
                 val dialable = value.filter { it.isDigit() || it == '+' }
                 if (dialable.length >= 6) {
-                    actions += EntityAction("Call", primary = true) {
+                    actions += EntityAction(context.getString(R.string.action_call), primary = true) {
                         context.start(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$dialable")))
                     }
-                    actions += EntityAction("Message") {
+                    actions += EntityAction(context.getString(R.string.action_message)) {
                         context.start(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$dialable")))
                     }
-                    actions += EntityAction("Save contact") {
+                    actions += EntityAction(context.getString(R.string.action_save_contact)) {
                         context.start(
                             Intent(ContactsContract.Intents.Insert.ACTION)
                                 .setType(ContactsContract.RawContacts.CONTENT_TYPE)
@@ -61,10 +65,10 @@ object EntityActions {
             }
 
             EntityType.EMAIL -> {
-                actions += EntityAction("Email", primary = true) {
+                actions += EntityAction(context.getString(R.string.action_email), primary = true) {
                     context.start(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$value")))
                 }
-                actions += EntityAction("Save contact") {
+                actions += EntityAction(context.getString(R.string.action_save_contact)) {
                     context.start(
                         Intent(ContactsContract.Intents.Insert.ACTION)
                             .setType(ContactsContract.RawContacts.CONTENT_TYPE)
@@ -79,7 +83,7 @@ object EntityActions {
                 } else {
                     "https://$value"
                 }
-                actions += EntityAction("Open", primary = true) {
+                actions += EntityAction(context.getString(R.string.action_open), primary = true) {
                     context.start(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                 }
             }
@@ -89,14 +93,18 @@ object EntityActions {
             else -> Unit
         }
 
-        actions += EntityAction(COPY, primary = actions.none { it.primary }) {
-            Clipboard.copy(context, item.type.label, value, item.type.sensitive)
+        actions += EntityAction(
+            context.getString(R.string.action_copy),
+            primary = actions.none { it.primary },
+            isCopy = true
+        ) {
+            Clipboard.copy(context, context.getString(item.type.labelRes()), value, item.type.sensitive)
         }
 
         // Only worth offering for values distinctive enough that a second hit means something.
         // Searching for a two-digit amount matches half the library and teaches nobody anything.
         if (value.length >= 5 && item.type !in noisyToSearch) {
-            actions += EntityAction("Find in Deja") { onFind(value) }
+            actions += EntityAction(context.getString(R.string.action_find_in_deja)) { onFind(value) }
         }
 
         return actions

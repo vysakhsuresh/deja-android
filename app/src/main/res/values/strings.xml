@@ -10,10 +10,6 @@
     <string name="notif_action_copy">Copy</string>
     <string name="copied">Copied</string>
     <string name="copy_gone">That screenshot is no longer in Deja</string>
-    <string name="entity_code">One-time code</string>
-    <string name="entity_wifi_password">Wi-Fi password</string>
-    <string name="entity_booking_ref">Booking ref</string>
-    <string name="entity_amount">Amount</string>
 
     <!-- Share sheet -->
     <string name="share_label">Read with Deja</string>

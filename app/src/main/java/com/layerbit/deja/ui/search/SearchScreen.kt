@@ -42,7 +42,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -55,7 +58,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.layerbit.deja.DejaApplication
+import com.layerbit.deja.R
 import com.layerbit.deja.data.db.ShotEntity
+import com.layerbit.deja.data.index.DateLabel
 import com.layerbit.deja.data.index.SearchQuery
 import com.layerbit.deja.data.model.Category
 import com.layerbit.deja.ui.components.ScreenHeader
@@ -63,11 +68,13 @@ import com.layerbit.deja.ui.components.ShotThumbnail
 import com.layerbit.deja.ui.components.TapTarget
 import com.layerbit.deja.ui.components.tappable
 import com.layerbit.deja.ui.detail.DetailContext
+import com.layerbit.deja.ui.displayName
 import com.layerbit.deja.ui.theme.DejaColors
 import com.layerbit.deja.ui.theme.SpaceGrotesk
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle as DateTextStyle
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -179,7 +186,7 @@ fun SearchScreen(
             .fillMaxSize()
             .imePadding()
     ) {
-        ScreenHeader(title = "Search", onBack = onBack)
+        ScreenHeader(title = stringResource(R.string.search_title), onBack = onBack)
 
         Row(
             modifier = Modifier
@@ -201,7 +208,7 @@ fun SearchScreen(
             Box(Modifier.weight(1f)) {
                 if (query.isEmpty()) {
                     Text(
-                        text = "words, an app, a category…",
+                        text = stringResource(R.string.search_placeholder),
                         color = DejaColors.Dim,
                         fontSize = 15.sp
                     )
@@ -235,7 +242,7 @@ fun SearchScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Close,
-                        contentDescription = "Clear",
+                        contentDescription = stringResource(R.string.search_clear_query_cd),
                         tint = DejaColors.Dim,
                         modifier = Modifier.size(17.dp)
                     )
@@ -245,7 +252,7 @@ fun SearchScreen(
 
         Spacer(Modifier.height(14.dp))
 
-        val scope = plan.window?.let { " in ${it.label}" }.orEmpty()
+        val scope = plan.window?.display?.let { dateLabel(it) }
 
         if (query.isBlank()) {
             if (recent.isNotEmpty()) {
@@ -256,7 +263,7 @@ fun SearchScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "RECENT",
+                        text = stringResource(R.string.search_recent_heading),
                         color = DejaColors.Dim,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
@@ -264,7 +271,7 @@ fun SearchScreen(
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        text = "Clear",
+                        text = stringResource(R.string.search_clear_recent),
                         color = DejaColors.Dim,
                         fontSize = 12.sp,
                         modifier = Modifier
@@ -306,12 +313,14 @@ fun SearchScreen(
 
         Text(
             text = when {
-                query.isBlank() -> "Words inside your screenshots, the app each came from, and " +
-                    "when you took them — try \"receipt last week\"."
-                searching && results.isEmpty() -> "Looking…"
-                results.isEmpty() -> "No matches on this device$scope."
-                results.size == 1 -> "1 match$scope · searched on this device"
-                else -> "${results.size} matches$scope · searched on this device"
+                query.isBlank() -> stringResource(R.string.search_intro)
+                searching && results.isEmpty() -> stringResource(R.string.search_looking)
+                results.isEmpty() && scope != null ->
+                    stringResource(R.string.search_no_matches_in, scope)
+                results.isEmpty() -> stringResource(R.string.search_no_matches)
+                scope != null ->
+                    pluralStringResource(R.plurals.search_matches_in, results.size, results.size, scope)
+                else -> pluralStringResource(R.plurals.search_matches, results.size, results.size)
             },
             color = DejaColors.Dim,
             fontSize = 12.5.sp,
@@ -368,7 +377,7 @@ private fun ResultCard(shot: ShotEntity, tokens: List<String>, onClick: () -> Un
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(DejaColors.SurfaceDim)
-            .tappable(onClickLabel = "Open screenshot", onClick = onClick)
+            .tappable(onClickLabel = stringResource(R.string.search_open_result), onClick = onClick)
             .padding(13.dp)
     ) {
         ShotThumbnail(
@@ -383,7 +392,7 @@ private fun ResultCard(shot: ShotEntity, tokens: List<String>, onClick: () -> Un
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = Category.fromId(shot.category).label,
+                    text = Category.fromId(shot.category).displayName(),
                     color = DejaColors.Amber,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold
@@ -402,7 +411,7 @@ private fun ResultCard(shot: ShotEntity, tokens: List<String>, onClick: () -> Un
                     Spacer(Modifier.width(7.dp))
                     Icon(
                         imageVector = Icons.Filled.Star,
-                        contentDescription = "Kept",
+                        contentDescription = stringResource(R.string.search_kept_cd),
                         tint = DejaColors.Amber,
                         modifier = Modifier.size(11.dp)
                     )
@@ -410,7 +419,11 @@ private fun ResultCard(shot: ShotEntity, tokens: List<String>, onClick: () -> Un
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = highlighted(snippet(shot.text, tokens), tokens, DejaColors.AmberBright),
+                text = highlighted(
+                    snippet(shot.text, tokens, stringResource(R.string.search_no_readable_text)),
+                    tokens,
+                    DejaColors.AmberBright
+                ),
                 color = DejaColors.Muted,
                 fontSize = 13.5.sp,
                 lineHeight = 19.sp,
@@ -444,9 +457,9 @@ private fun highlighted(text: String, tokens: List<String>, accent: Color): Anno
     }
 
 /** The slice of OCR text around the first term that matched, so the hit is visible in the list. */
-private fun snippet(text: String, tokens: List<String>, radius: Int = 60): String {
+private fun snippet(text: String, tokens: List<String>, empty: String, radius: Int = 60): String {
     val flat = text.replace(Regex("\\s+"), " ").trim()
-    if (flat.isEmpty()) return "No readable text"
+    if (flat.isEmpty()) return empty
 
     val hit = tokens
         .mapNotNull { token -> flat.indexOf(token, ignoreCase = true).takeIf { it >= 0 } }
@@ -457,6 +470,23 @@ private fun snippet(text: String, tokens: List<String>, radius: Int = 60): Strin
     val prefix = if (start > 0) "…" else ""
     val suffix = if (end < flat.length) "…" else ""
     return prefix + flat.substring(start, end) + suffix
+}
+
+/** The understood span of time, in the user's language - the query itself is still read in English. */
+@Composable
+private fun dateLabel(label: DateLabel): String = when (label) {
+    is DateLabel.Fixed -> stringResource(label.res)
+    is DateLabel.LastCount -> pluralStringResource(label.res, label.count, label.count)
+    is DateLabel.OfMonth -> {
+        val locale = LocalConfiguration.current.locales[0]
+        val month = label.month.getDisplayName(DateTextStyle.FULL_STANDALONE, locale)
+        if (label.year != null) {
+            stringResource(R.string.search_window_month_year, month, label.year)
+        } else {
+            month
+        }
+    }
+    is DateLabel.Year -> label.year.toString()
 }
 
 private val shortDate = DateTimeFormatter.ofPattern("d MMM")

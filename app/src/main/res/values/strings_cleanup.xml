@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Clean up screen -->
+    <string name="cleanup_title">Clean up</string>
+    <string name="cleanup_scan_again">Scan again</string>
+    <string name="cleanup_rescan_title">A scan is already running</string>
+    <plurals name="cleanup_rescan_message">
+        <item quantity="one">Deja has read %1$d of %2$d screenshot. Starting again from the top throws that progress away and re-reads everything.</item>
+        <item quantity="other">Deja has read %1$d of %2$d screenshots. Starting again from the top throws that progress away and re-reads everything.</item>
+    </plurals>
+    <string name="cleanup_rescan_confirm">Start over anyway</string>
+    <string name="cleanup_forever_title">Delete permanently?</string>
+    <plurals name="cleanup_forever_message">
+        <item quantity="one">%1$d screenshot, %2$s total. This skips the trash entirely - there is no undo and no recovery.</item>
+        <item quantity="other">%1$d screenshots, %2$s total. This skips the trash entirely - there is no undo and no recovery.</item>
+    </plurals>
+    <string name="cleanup_forever_confirm">Delete forever</string>
+    <string name="cleanup_status_loading">Working out what\'s safe to remove…</string>
+    <string name="cleanup_status_indexing">Still reading — this will grow as Deja catches up</string>
+    <string name="cleanup_status_hint">Tap a group to include or exclude it, or open one to choose individual screenshots</string>
+    <plurals name="cleanup_pinned_kept">
+        <item quantity="one">%1$d kept — never offered here</item>
+        <item quantity="other">%1$d kept — never offered here</item>
+    </plurals>
+    <string name="cleanup_freed">%1$s removed</string>
+    <string name="cleanup_pick_title">Pick screenshots yourself</string>
+    <string name="cleanup_pick_subtitle">Browse everything and choose exactly what goes</string>
+    <string name="cleanup_clear_all">Clear all</string>
+    <string name="cleanup_select_all">Select all groups</string>
+    <string name="cleanup_empty">Nothing to clean up. Your screenshots folder is already tidy.</string>
+    <string name="cleanup_trash_explainer">\"Move to trash\" is recoverable from your gallery\'s trash. \"Delete forever\" is not.</string>
+    <plurals name="cleanup_trash_button">
+        <item quantity="one">Move to trash · %1$s · %2$d screenshot</item>
+        <item quantity="other">Move to trash · %1$s · %2$d screenshots</item>
+    </plurals>
+    <string name="cleanup_nothing_selected">Nothing selected</string>
+    <string name="cleanup_forever_button">Delete forever instead — skips the trash, cannot be undone</string>
+
+    <!-- Group rows -->
+    <string name="cleanup_state_all_selected">All selected</string>
+    <string name="cleanup_state_some_selected">Some selected</string>
+    <string name="cleanup_state_none_selected">None selected</string>
+    <string name="cleanup_group_partial">%1$d of %2$d selected · %3$s</string>
+    <string name="cleanup_group_summary">%1$d · %2$s · %3$s</string>
+    <string name="cleanup_collapse">Collapse</string>
+    <string name="cleanup_choose_individually">Choose individually</string>
+    <string name="cleanup_screenshot">Screenshot</string>
+    <string name="cleanup_will_be_removed">Will be removed</string>
+    <string name="cleanup_will_be_kept">Will be kept</string>
+    <string name="cleanup_kept">Kept</string>
+
+    <!-- Groups -->
+    <string name="cleanup_group_manual_title">Your picks</string>
+    <string name="cleanup_group_manual_subtitle">Chosen on the picker screen</string>
+    <string name="cleanup_group_old_codes_title">Old one-time codes</string>
+    <string name="cleanup_group_old_codes_subtitle">Captured more than a month ago</string>
+    <string name="cleanup_group_old_chatter_title">Old chatter &amp; forwards</string>
+    <string name="cleanup_group_old_chatter_subtitle">Chats, posts and clips older than six months</string>
+    <string name="cleanup_group_duplicates_title">Exact duplicates</string>
+    <string name="cleanup_group_duplicates_subtitle">Same contents and size, newest copy kept</string>
+    <string name="cleanup_group_near_duplicates_title">Near-identical shots</string>
+    <string name="cleanup_group_near_duplicates_subtitle">The same screen captured more than once</string>
+    <string name="cleanup_group_unreadable_title">No readable text</string>
+    <string name="cleanup_group_unreadable_subtitle">Nothing Deja could read out of these</string>
+    <string name="cleanup_group_ancient_title">Older than a year</string>
+    <string name="cleanup_group_ancient_subtitle">Everything else from before last year</string>
+    <string name="cleanup_group_large_title">Largest screenshots</string>
+    <string name="cleanup_group_large_subtitle">Over 2 MB each - check these before removing</string>
+
+    <!-- Pick screen -->
+    <string name="pick_title">Pick screenshots</string>
+    <string name="pick_done">Done</string>
+    <string name="pick_done_count">Done · %1$d</string>
+    <string name="pick_hint">Tap any screenshot to select it for Clean up. Nothing is removed on this screen. A star means you marked it as kept — picking it here overrides that.</string>
+    <string name="pick_empty">Nothing indexed yet</string>
+    <string name="pick_screenshot">Screenshot</string>
+    <string name="pick_state_picked">Picked for Clean up</string>
+    <string name="pick_state_not_picked">Not picked</string>
+    <string name="pick_kept">Kept</string>
+</resources>

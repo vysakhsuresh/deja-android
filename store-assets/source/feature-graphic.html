@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Deja feature graphic</title>
+<!-- Source for feature-graphic-1024x500.png. Render with:
+     msedge --headless --disable-gpu --hide-scrollbars --window-size=1024,500
+            --screenshot=feature-graphic-1024x500.png source/feature-graphic.html -->
+<style>
+  @font-face { font-family: SG; font-weight: 400; src: url("../../app/src/main/res/font/space_grotesk_regular.ttf"); }
+  @font-face { font-family: SG; font-weight: 500; src: url("../../app/src/main/res/font/space_grotesk_medium.ttf"); }
+  @font-face { font-family: SG; font-weight: 600; src: url("../../app/src/main/res/font/space_grotesk_semibold.ttf"); }
+  @font-face { font-family: SG; font-weight: 700; src: url("../../app/src/main/res/font/space_grotesk_bold.ttf"); }
+  html, body { margin: 0; width: 1024px; height: 500px; overflow: hidden; }
+  body {
+    font-family: SG, sans-serif; color: #f5f1ec;
+    background:
+      radial-gradient(600px 380px at 82% 40%, rgba(232,163,61,0.16), transparent 70%),
+      #0e0d0c;
+    display: flex; align-items: center;
+  }
+  .left { padding-left: 72px; width: 520px; }
+  .mark { font-size: 40px; font-weight: 700; letter-spacing: -1.4px; margin: 0 0 34px; color: #f5f1ec; }
+  .mark span { color: #e8a33d; }
+  h1 { font-size: 52px; line-height: 1.04; letter-spacing: -2px; margin: 0 0 18px; font-weight: 700; }
+  h1 em { font-style: normal; color: #e8a33d; }
+  p { font-size: 21px; line-height: 1.4; color: #a79e94; margin: 0; max-width: 430px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 26px;
+    background: #16301f; color: #58c08c; border-radius: 999px; padding: 7px 16px;
+    font-size: 15px; font-weight: 600;
+  }
+  .badge i { width: 8px; height: 8px; border-radius: 50%; background: #58c08c; display: inline-block; }
+  .right { flex: 1; display: flex; justify-content: center; }
+  .phone {
+    width: 310px; height: 400px; border-radius: 34px; background: #151312;
+    border: 1px solid #2c2825; padding: 22px 18px; box-sizing: border-box;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55); transform: rotate(-3deg);
+  }
+  .search {
+    background: #1a1817; border: 1px solid #262220; border-radius: 16px;
+    padding: 12px 14px; font-size: 16px; color: #f5f1ec; margin-bottom: 14px;
+  }
+  .search b { color: #e8a33d; font-weight: 500; }
+  .card {
+    display: flex; gap: 11px; background: #1a1817; border-radius: 14px;
+    padding: 10px; margin-bottom: 10px;
+  }
+  .thumb { width: 46px; height: 62px; border-radius: 8px; background: linear-gradient(#2c2825, #201d1b); flex: none; }
+  .card .t { font-size: 13px; color: #6e655c; margin-bottom: 3px; }
+  .card .s { font-size: 13.5px; line-height: 1.35; color: #a79e94; }
+  .card .s b { color: #f2b75c; font-weight: 600; }
+  .notif {
+    background: #262220; border-radius: 16px; padding: 12px 14px; margin-top: 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .notif .h { font-size: 12.5px; color: #a79e94; }
+  .notif .v { font-size: 19px; font-weight: 700; letter-spacing: 1px; }
+  .notif .c { background: #e8a33d; color: #16120c; border-radius: 10px; padding: 7px 12px; font-size: 13px; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="left">
+    <p class="mark">deja<span>.</span></p>
+    <h1>No internet<br>permission.<br><em>Find any screenshot.</em></h1>
+    <p>Search every screenshot by what it says — read on your phone, in English and Hindi.</p>
+    <span class="badge"><i></i>Checkable on this page</span>
+  </div>
+  <div class="right">
+    <div class="phone">
+      <div class="search">receipt <b>last week</b></div>
+      <div class="card"><div class="thumb"></div><div><div class="t">Payments &amp; bills · Tue</div><div class="s">Order delivered · <b>Receipt</b> total ₹450.00 · paid via UPI</div></div></div>
+      <div class="card"><div class="thumb"></div><div><div class="t">Tickets &amp; travel · Mon</div><div class="s">Booking <b>receipt</b> · PNR 4521873390 · 3A</div></div></div>
+      <div class="notif"><div><div class="h">Deja read this · One-time code</div><div class="v">•••• 1902</div></div><div class="c">Copy</div></div>
+    </div>
+  </div>
+</body>
+</html>

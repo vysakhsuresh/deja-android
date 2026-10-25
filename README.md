@@ -51,9 +51,14 @@ Two consequences that shape the code:
 | Detail | Swipes sideways through whatever list you opened it from, double-taps to zoom, and turns what Deja pulled out into something you can act on — call a number, message it, save it as a contact, open a link, or find every other screenshot that mentions the same value. ID and card numbers are masked until tapped. The OCR text is selectable. |
 | Keep | Star a screenshot and it is excluded from every automatic Clean up group, kept as the surviving copy when duplicates are collapsed, filterable as its own bucket, and one tap from the top of the timeline. |
 | Clean up | Seven automatic groups plus your own picks, each expandable to choose individual screenshots rather than all-or-nothing. Two ways to remove them: `MediaStore.createTrashRequest` (recoverable from the gallery's trash) or `MediaStore.createDeleteRequest` (gone immediately, no undo) — both confirmed in a system dialog Deja cannot bypass. |
-| Privacy | The permission story, what is indexed, and guarded controls to stop a scan, re-read, or wipe the index. |
+| Privacy | The permission story, what is indexed, and guarded controls to stop a scan, re-read, **export** or wipe the index. Also holds the new-screenshot notification switch and the theme choice. |
+| New screenshots | **Opt-in.** Take a screenshot with a one-time code, Wi-Fi password, booking reference or amount in it and a notification says what Deja read, with Copy. Woken by a MediaStore content-URI trigger (WorkManager → JobScheduler) — no foreground service, no polling. Codes are masked in the notification, hidden on the lock screen, and the value is read from the index only when Copy is tapped. |
+| Share | Share → Deja from any app. The image is saved to `Pictures/Deja` through MediaStore (a shared URI is a temporary grant) and indexed like a screenshot. |
+| Widgets & tile | Two Glance widgets — the Kept shelf, and the latest code with Copy — and a Quick Settings tile that opens search. |
+| Export | Everything in the index as JSON, to a file the user picks. Sensitive values are left out, including where they appear in the OCR text, unless the user asks for them. |
+| Themes & languages | Dark and light palettes (same amber, warm paper instead of charcoal), following the phone or set by hand. UI in English and Hindi. |
 | Browse | Every category and every app as a readable vertical list with counts. The timeline's chip row only ever shows what fits, and the list grows as a scan runs, so this is where the whole thing lives. Picking anything drops you back on the timeline already filtered. |
-| About | What the library looks like in aggregate, plus support and feedback links. |
+| About | What the library looks like in aggregate, plus support and feedback links, and **Report a problem**, which attaches the local crash log (see below). |
 
 ## The engine
 
@@ -309,14 +314,14 @@ app/src/main/java/com/layerbit/deja/
 Screen designs and a clickable prototype live in the `deja-design/` folder of the
 `layerlink-android` repository.
 
-`store-assets/` holds the source logo and a 512×512 listing icon. The launcher icon itself is a
+`store-assets/` holds the source logo, the 512×512 listing icon, the 1024×500 feature graphic (rendered from `source/feature-graphic.html`), the privacy policy (`privacy-policy.md`, and `privacy.html` to publish at layerbit.co.in/deja/privacy), the listing copy (`play-listing.md`) and the Play Console answers — Data safety and the photo-permission declaration (`play-console.md`). The launcher icon itself is a
 vector traced from that logo (`ic_launcher_foreground.xml`) rather than an exported bitmap, so it
 stays sharp at every density and can supply the themed-icon layer.
 
 ## Requirements
 
 - Android Studio with an SDK for **compileSdk 36**
-- JDK 17
+- JDK 17 or 21 to run Gradle (Gradle 8.11 does not start on Java 25, which newer Android Studio bundles — point `JAVA_HOME` at a 21)
 - `minSdk` is **30**. That floor buys `MediaStore.createTrashRequest`, so deleting a screenshot is
   recoverable rather than permanent; supporting older releases would mean
   `WRITE_EXTERNAL_STORAGE` and an irreversible delete.
@@ -327,11 +332,48 @@ stays sharp at every density and can supply the themed-icon layer.
 ./gradlew :app:assembleDebug
 ```
 
-**This has not been compiled.** The sandbox it was written in has no Android SDK and no route to
-`dl.google.com`, so Gradle could not resolve AGP, AndroidX, or ML Kit and no build was ever run.
-The source was written and reviewed by hand against those APIs. Open it in Android Studio, sync,
-and expect to fix whatever the first compile turns up.
+### Release
+
+```
+./gradlew :app:bundleRelease      # upload this: app/build/outputs/bundle/release/app-release.aab
+```
 
 Release builds read signing credentials from a git-ignored `keystore.properties` — copy
 `keystore.properties.example` and fill it in. Without that file the release variant still builds,
 unsigned, which is fine locally but cannot be uploaded to Play Console.
+
+Release is minified **and** resource-shrunk. ML Kit loads its recognisers reflectively from
+internal packages that differ per model (Latin, Devanagari, barcode), so `proguard-rules.pro`
+keeps all of `com.google.mlkit.**`, `com.google.android.gms.internal.mlkit_**` and
+`com.google.android.odml.**`. A debug build passing proves nothing about this — check Latin OCR,
+a Hindi screenshot and a Wi-Fi QR on the **release** build after any dependency change.
+
+Checks before every upload:
+
+1. **No network permission.** `INTERNET` and `ACCESS_NETWORK_STATE` must appear as removed in
+   `app/build/outputs/logs/manifest-merger-release-report.txt`.
+2. **16 KB pages.** Play requires 16 KB-aligned native libraries for apps targeting API 35+.
+   `barcode-scanning` 17.2.0 shipped a 4 KB-aligned `libbarhopper_v3.so`; 17.3.0 fixed it. After
+   any ML Kit bump, unzip the release APK and check every 64-bit `.so` with
+   `llvm-readelf -l <lib> | grep LOAD` — the alignment column must read `0x4000`. Native libs are
+   packaged uncompressed (`useLegacyPackaging = false`) so they can be mapped in place.
+
+### Crash reports without crash reporting
+
+Deja has no crash-reporting SDK and never will. Instead an uncaught-exception handler appends
+the stack trace (and nothing else) to `crash.log` in app-private storage, capped at 48 KB.
+About → "Report a problem" copies it into the one folder the app's FileProvider exposes and
+attaches it to an email the user sends from their own mail app. The user stays the only channel;
+they just have something useful to send.
+
+## Out of scope, on purpose
+
+These come up, and the answer is no:
+
+- **Semantic / visual search** — "the one with the dog". It needs an on-device image-embedding
+  model and an index built from it. Google Photos does this and will keep doing it better. Deja's
+  answer is that it finds text, offline, and is honest about that.
+- **Translation.** ML Kit Translate downloads its language models at runtime, which would need
+  the `INTERNET` permission. That is the one thing this app will not trade.
+- **Analytics, crash-reporting SDKs, remote config, A/B testing.** Non-negotiable — each one is a
+  network client by definition.

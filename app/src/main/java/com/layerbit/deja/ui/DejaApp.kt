@@ -22,6 +22,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -31,6 +33,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.layerbit.deja.DejaApplication
+import com.layerbit.deja.R
 import com.layerbit.deja.data.index.IndexWorker
 import com.layerbit.deja.data.index.ScanPreferences
 import com.layerbit.deja.data.scan.MediaGeneration
@@ -168,15 +171,14 @@ private fun ScanGate() {
         LaunchedEffect(Unit) { indexed.value = app.repository.count() }
 
         DejaDialog(
-            title = "Finish the last scan?",
-            message = "Deja stopped part way through and has ${indexed.value} screenshots read " +
-                "so far. It can carry on from there, or forget those and read everything again.",
-            confirmLabel = "Resume",
+            title = stringResource(R.string.resume_title),
+            message = pluralStringResource(R.plurals.resume_message, indexed.value, indexed.value),
+            confirmLabel = stringResource(R.string.resume_confirm),
             onConfirm = {
                 askResume = false
                 IndexWorker.enqueue(context)
             },
-            secondaryLabel = "Start fresh",
+            secondaryLabel = stringResource(R.string.resume_start_fresh),
             onSecondary = {
                 askResume = false
                 scope.launch {
@@ -184,7 +186,7 @@ private fun ScanGate() {
                     IndexWorker.restart(context)
                 }
             },
-            dismissLabel = "Not now",
+            dismissLabel = stringResource(R.string.resume_not_now),
             onDismiss = { askResume = false }
         )
     }

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Detail screen -->
+    <string name="detail_title">स्क्रीनशॉट</string>
+    <string name="detail_title_position">%2$d में से %1$d</string>
+    <string name="detail_pin_kept_cd">सहेजा गया - हटाने के लिए टैप करें</string>
+    <string name="detail_pin_keep_cd">यह स्क्रीनशॉट रखें</string>
+    <string name="detail_image_cd">स्क्रीनशॉट</string>
+    <string name="detail_zoom_hint">ज़ूम करने के लिए दो बार टैप करें</string>
+    <string name="detail_share">शेयर करें</string>
+    <string name="detail_open">खोलें</string>
+    <string name="detail_share_chooser">स्क्रीनशॉट शेयर करें</string>
+    <string name="detail_unreadable">Deja इसमें कोई टेक्स्ट नहीं पढ़ पाया — या तो इसमें टेक्स्ट है ही नहीं, या यह ऐसी लिपि में है जिसे Deja अभी नहीं पढ़ सकता। स्क्रीनशॉट जैसा था, वैसा ही है।</string>
+    <string name="detail_nothing_found">Deja को इसमें काम की कोई चीज़ नहीं मिली।</string>
+    <string name="detail_found_heading">इस स्क्रीनशॉट में मिला</string>
+    <string name="detail_sensitive_note">आईडी और कार्ड नंबर तब तक छिपे रहते हैं जब तक आप उन पर टैप न करें। Deja इन्हें कहीं नहीं भेज सकता, पर कोई कंधे के ऊपर से झाँक तो सकता है।</string>
+    <string name="detail_copied">कॉपी हो गया</string>
+    <string name="detail_meta_devanagari">देवनागरी</string>
+    <string name="detail_meta_kept">सहेजा गया</string>
+    <string name="detail_all_from_app">%1$s के सभी</string>
+    <string name="detail_show_text">Deja ने जो पढ़ा, वो दिखाएँ</string>
+    <string name="detail_hide_text">Deja ने जो पढ़ा, वो छिपाएँ</string>
+    <string name="detail_reveal">दिखाएँ</string>
+    <string name="detail_close">बंद करें</string>
+
+    <!-- Things you can do with a found value -->
+    <string name="action_call">कॉल करें</string>
+    <string name="action_message">मैसेज करें</string>
+    <string name="action_save_contact">कॉन्टैक्ट सेव करें</string>
+    <string name="action_email">ईमेल करें</string>
+    <string name="action_open">खोलें</string>
+    <string name="action_copy">कॉपी करें</string>
+    <string name="action_find_in_deja">Deja में ढूँढें</string>
+</resources>

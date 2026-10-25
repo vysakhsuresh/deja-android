@@ -1,6 +1,10 @@
 package com.layerbit.deja.ui.timeline
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.layerbit.deja.R
 import com.layerbit.deja.data.model.Category
+import com.layerbit.deja.ui.displayName
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,10 +17,10 @@ sealed interface TimelineFilter {
     data class FromApp(val app: String) : TimelineFilter
 
     val label: String
-        get() = when (this) {
-            is All -> "All screenshots"
-            is Pinned -> "Kept"
-            is OfCategory -> category.label
+        @Composable get() = when (this) {
+            is All -> stringResource(R.string.timeline_filter_all)
+            is Pinned -> stringResource(R.string.timeline_kept)
+            is OfCategory -> category.displayName()
             is FromApp -> app
         }
 }

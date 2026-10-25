@@ -30,10 +30,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.layerbit.deja.R
 import com.layerbit.deja.ui.theme.DejaColors
 
 /** Every tappable row in the app clears the 44dp floor through this size. */
@@ -62,7 +65,7 @@ fun ScreenHeader(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.common_back),
                     tint = DejaColors.Text
                 )
             }
@@ -82,15 +85,15 @@ fun ScreenHeader(
     }
 }
 
-enum class Tab(val label: String, val icon: ImageVector) {
-    TIMELINE("Timeline", Icons.Filled.Home),
+enum class Tab(@StringRes val labelRes: Int, val icon: ImageVector) {
+    TIMELINE(R.string.tab_timeline, Icons.Filled.Home),
     // Menu (a stacked-lines glyph) rather than a list-with-bullets icon: material-icons-core ships
     // only a small curated subset and Menu is reliably part of it, where a dedicated "list" glyph
     // is not.
-    BROWSE("Browse", Icons.Filled.Menu),
-    CLEAN("Clean", Icons.Filled.Delete),
-    PRIVACY("Privacy", Icons.Filled.Lock),
-    ABOUT("About", Icons.Filled.Info)
+    BROWSE(R.string.tab_browse, Icons.Filled.Menu),
+    CLEAN(R.string.tab_clean, Icons.Filled.Delete),
+    PRIVACY(R.string.tab_privacy, Icons.Filled.Lock),
+    ABOUT(R.string.tab_about, Icons.Filled.Info)
 }
 
 @Composable
@@ -115,6 +118,7 @@ fun DejaBottomBar(current: Tab, onSelect: (Tab) -> Unit) {
         ) {
             Tab.entries.forEach { tab ->
                 val active = tab == current
+                val label = stringResource(tab.labelRes)
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -125,13 +129,13 @@ fun DejaBottomBar(current: Tab, onSelect: (Tab) -> Unit) {
                 ) {
                     Icon(
                         imageVector = tab.icon,
-                        contentDescription = tab.label,
+                        contentDescription = label,
                         tint = if (active) DejaColors.Amber else DejaColors.Dim,
                         modifier = Modifier.size(22.dp)
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = tab.label,
+                        text = label,
                         color = if (active) DejaColors.Amber else DejaColors.Dim,
                         fontSize = 10.5.sp,
                         maxLines = 1,
@@ -153,7 +157,7 @@ fun SettingsButton(onClick: () -> Unit) {
     ) {
         Icon(
             imageVector = Icons.Filled.Settings,
-            contentDescription = "Privacy and settings",
+            contentDescription = stringResource(R.string.common_settings_description),
             tint = DejaColors.Muted,
             modifier = Modifier.size(22.dp)
         )
@@ -167,7 +171,7 @@ fun DejaDialog(
     confirmLabel: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
-    dismissLabel: String = "Cancel",
+    dismissLabel: String? = null,
     destructive: Boolean = false,
     secondaryLabel: String? = null,
     onSecondary: (() -> Unit)? = null
@@ -196,7 +200,10 @@ fun DejaDialog(
                     }
                 }
                 TextButton(onClick = onDismiss) {
-                    Text(text = dismissLabel, color = DejaColors.Muted)
+                    Text(
+                        text = dismissLabel ?: stringResource(R.string.common_cancel),
+                        color = DejaColors.Muted
+                    )
                 }
             }
         }

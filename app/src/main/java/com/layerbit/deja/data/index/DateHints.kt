@@ -1,5 +1,8 @@
 package com.layerbit.deja.data.index
 
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
+import com.layerbit.deja.R
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.Month
@@ -7,7 +10,31 @@ import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 
 /** A span of time pulled out of a query, and a label short enough to show back to the user. */
-data class DateWindow(val from: Long, val to: Long, val label: String)
+data class DateWindow(
+    val from: Long,
+    val to: Long,
+    /** English, as matched. What the screen shows comes from [display], in the user's language. */
+    val label: String,
+    val display: DateLabel
+)
+
+/**
+ * The window's label in a form the UI can translate. The query is still read in English - only
+ * the words shown back to the user are resolved from resources.
+ */
+sealed interface DateLabel {
+    /** A fixed phrase: "today", "last week", "recently". */
+    data class Fixed(@StringRes val res: Int) : DateLabel
+
+    /** "last 3 weeks" - a plural, since the count is whatever was typed. */
+    data class LastCount(@PluralsRes val res: Int, val count: Int) : DateLabel
+
+    /** A month, with the year only when the query named one. Rendered with the locale's name. */
+    data class OfMonth(val month: Month, val year: Int?) : DateLabel
+
+    /** A bare year needs no translation. */
+    data class Year(val year: Int) : DateLabel
+}
 
 /**
  * Reads the time out of a search.
@@ -56,15 +83,42 @@ object DateHints {
                 "month" -> today.minusMonths(count.toLong())
                 else -> today.minusYears(count.toLong())
             }
-            return hit(start, today, "last $count ${unit}s", match.value.split(" ").toSet(), zone)
+            val plural = when (unit) {
+                "day" -> R.plurals.search_window_last_days
+                "week" -> R.plurals.search_window_last_weeks
+                "month" -> R.plurals.search_window_last_months
+                else -> R.plurals.search_window_last_years
+            }
+            return hit(
+                start,
+                today,
+                "last $count ${unit}s",
+                DateLabel.LastCount(plural, count),
+                match.value.split(" ").toSet(),
+                zone
+            )
         }
 
         when {
             lower.contains("today") ->
-                return hit(today, today, "today", setOf("today"), zone)
+                return hit(
+                    today,
+                    today,
+                    "today",
+                    DateLabel.Fixed(R.string.search_window_today),
+                    setOf("today"),
+                    zone
+                )
 
             lower.contains("yesterday") ->
-                return hit(today.minusDays(1), today.minusDays(1), "yesterday", setOf("yesterday"), zone)
+                return hit(
+                    today.minusDays(1),
+                    today.minusDays(1),
+                    "yesterday",
+                    DateLabel.Fixed(R.string.search_window_yesterday),
+                    setOf("yesterday"),
+                    zone
+                )
 
             lower.contains("last week") -> {
                 val startOfThisWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
@@ -72,6 +126,7 @@ object DateHints {
                     startOfThisWeek.minusWeeks(1),
                     startOfThisWeek.minusDays(1),
                     "last week",
+                    DateLabel.Fixed(R.string.search_window_last_week),
                     setOf("last", "week"),
                     zone
                 )
@@ -82,6 +137,7 @@ object DateHints {
                     today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
                     today,
                     "this week",
+                    DateLabel.Fixed(R.string.search_window_this_week),
                     setOf("this", "week"),
                     zone
                 )
@@ -92,13 +148,21 @@ object DateHints {
                     startOfLastMonth,
                     startOfLastMonth.with(TemporalAdjusters.lastDayOfMonth()),
                     "last month",
+                    DateLabel.Fixed(R.string.search_window_last_month),
                     setOf("last", "month"),
                     zone
                 )
             }
 
             lower.contains("this month") ->
-                return hit(today.withDayOfMonth(1), today, "this month", setOf("this", "month"), zone)
+                return hit(
+                    today.withDayOfMonth(1),
+                    today,
+                    "this month",
+                    DateLabel.Fixed(R.string.search_window_this_month),
+                    setOf("this", "month"),
+                    zone
+                )
 
             lower.contains("last year") -> {
                 val year = today.year - 1
@@ -106,6 +170,7 @@ object DateHints {
                     LocalDate.of(year, 1, 1),
                     LocalDate.of(year, 12, 31),
                     year.toString(),
+                    DateLabel.Year(year),
                     setOf("last", "year"),
                     zone
                 )
@@ -116,12 +181,20 @@ object DateHints {
                     LocalDate.of(today.year, 1, 1),
                     today,
                     today.year.toString(),
+                    DateLabel.Year(today.year),
                     setOf("this", "year"),
                     zone
                 )
 
             lower.contains("recently") || lower.contains("recent") ->
-                return hit(today.minusDays(14), today, "recently", setOf("recently", "recent"), zone)
+                return hit(
+                    today.minusDays(14),
+                    today,
+                    "recently",
+                    DateLabel.Fixed(R.string.search_window_recently),
+                    setOf("recently", "recent"),
+                    zone
+                )
         }
 
         // A month name, optionally followed by a year. Without a year it means the most recent
@@ -135,7 +208,14 @@ object DateHints {
             val start = LocalDate.of(year, month, 1)
             val consumed = if (explicitYear != null) setOf(word, explicitYear.toString()) else setOf(word)
             val label = if (explicitYear != null) "$word $explicitYear" else word
-            return hit(start, start.with(TemporalAdjusters.lastDayOfMonth()), label, consumed, zone)
+            return hit(
+                start,
+                start.with(TemporalAdjusters.lastDayOfMonth()),
+                label,
+                DateLabel.OfMonth(month, explicitYear),
+                consumed,
+                zone
+            )
         }
 
         // A bare year on its own.
@@ -147,6 +227,7 @@ object DateHints {
                 LocalDate.of(year, 1, 1),
                 LocalDate.of(year, 12, 31),
                 word,
+                DateLabel.Year(year),
                 setOf(word),
                 zone
             )
@@ -159,6 +240,7 @@ object DateHints {
         from: LocalDate,
         to: LocalDate,
         label: String,
+        display: DateLabel,
         consumed: Set<String>,
         zone: ZoneId
     ): Hit = Hit(
@@ -166,7 +248,8 @@ object DateHints {
             from = from.atStartOfDay(zone).toInstant().toEpochMilli(),
             // End of the closing day, so a screenshot taken at 23:50 is inside "today".
             to = to.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1,
-            label = label
+            label = label,
+            display = display
         ),
         consumed = consumed
     )

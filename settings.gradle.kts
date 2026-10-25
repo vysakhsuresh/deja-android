@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Deja"
 include(":app")
+include(":baselineprofile")

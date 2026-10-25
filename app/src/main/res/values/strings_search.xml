@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="search_title">Search</string>
+    <string name="search_placeholder">words, an app, a category…</string>
+    <string name="search_clear_query_cd">Clear</string>
+    <string name="search_recent_heading">RECENT</string>
+    <string name="search_clear_recent">Clear</string>
+    <!-- The example query stays in English in every language: dates are read from English words. -->
+    <string name="search_intro">Words inside your screenshots, the app each came from, and when you took them — try \"receipt last week\".</string>
+    <string name="search_looking">Looking…</string>
+    <string name="search_no_matches">No matches on this device.</string>
+    <!-- %1$s is a span of time, e.g. "last week". -->
+    <string name="search_no_matches_in">No matches on this device in %1$s.</string>
+    <plurals name="search_matches">
+        <item quantity="one">%1$d match · searched on this device</item>
+        <item quantity="other">%1$d matches · searched on this device</item>
+    </plurals>
+    <!-- %2$s is a span of time, e.g. "last week". -->
+    <plurals name="search_matches_in">
+        <item quantity="one">%1$d match in %2$s · searched on this device</item>
+        <item quantity="other">%1$d matches in %2$s · searched on this device</item>
+    </plurals>
+    <string name="search_open_result">Open screenshot</string>
+    <string name="search_kept_cd">Kept</string>
+    <string name="search_no_readable_text">No readable text</string>
+
+    <!-- The span of time understood from a query, shown back to the user -->
+    <string name="search_window_today">today</string>
+    <string name="search_window_yesterday">yesterday</string>
+    <string name="search_window_last_week">last week</string>
+    <string name="search_window_this_week">this week</string>
+    <string name="search_window_last_month">last month</string>
+    <string name="search_window_this_month">this month</string>
+    <string name="search_window_recently">recently</string>
+    <!-- %1$s is a month name, %2$d a year. -->
+    <string name="search_window_month_year">%1$s %2$d</string>
+    <plurals name="search_window_last_days">
+        <item quantity="one">last %1$d day</item>
+        <item quantity="other">last %1$d days</item>
+    </plurals>
+    <plurals name="search_window_last_weeks">
+        <item quantity="one">last %1$d week</item>
+        <item quantity="other">last %1$d weeks</item>
+    </plurals>
+    <plurals name="search_window_last_months">
+        <item quantity="one">last %1$d month</item>
+        <item quantity="other">last %1$d months</item>
+    </plurals>
+    <plurals name="search_window_last_years">
+        <item quantity="one">last %1$d year</item>
+        <item quantity="other">last %1$d years</item>
+    </plurals>
+</resources>

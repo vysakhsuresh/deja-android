@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Timeline: action confirmations -->
+    <plurals name="timeline_kept_count">
+        <item quantity="one">%1$d सहेजा गया</item>
+        <item quantity="other">%1$d सहेजे गए</item>
+    </plurals>
+    <string name="timeline_no_longer_kept">सहेजे गए से हटाया</string>
+    <plurals name="timeline_moved_to_trash">
+        <item quantity="one">%1$d ट्रैश में गया</item>
+        <item quantity="other">%1$d ट्रैश में गए</item>
+    </plurals>
+    <string name="timeline_dismiss">ठीक है</string>
+
+    <!-- Timeline: selection mode -->
+    <string name="timeline_leave_selection">चुनना बंद करें</string>
+    <string name="timeline_selected_count">%1$d चुने गए</string>
+    <string name="timeline_select_all">सब चुनें</string>
+    <string name="timeline_action_keep">सहेजें</string>
+    <string name="timeline_action_unkeep">न सहेजें</string>
+    <string name="timeline_action_share">शेयर करें</string>
+    <string name="timeline_action_trash">ट्रैश (%1$d)</string>
+    <string name="timeline_share_chooser">स्क्रीनशॉट शेयर करें</string>
+
+    <!-- Timeline: tiles and the kept shelf -->
+    <string name="timeline_kept">सहेजे गए</string>
+    <string name="timeline_kept_screenshot">सहेजा गया स्क्रीनशॉट</string>
+    <string name="timeline_open">खोलें</string>
+    <string name="timeline_select">चुनें</string>
+    <string name="timeline_toggle_selection">चुनें या हटाएँ</string>
+    <string name="timeline_state_selected">चुना गया</string>
+    <string name="timeline_state_not_selected">नहीं चुना गया</string>
+    <string name="timeline_tile_description">%1$s का स्क्रीनशॉट</string>
+
+    <!-- Timeline: search field -->
+    <string name="timeline_search_hint">अपने स्क्रीनशॉट में सर्च करें</string>
+
+    <!-- Timeline: scan banner -->
+    <string name="timeline_scan_unfinished">स्कैन अधूरा है</string>
+    <string name="timeline_scan_looking">स्क्रीनशॉट ढूँढ रहे हैं</string>
+    <string name="timeline_scan_upgrading">Deja पढ़े हुए को और बेहतर कर रहा है</string>
+    <string name="timeline_scan_reading">आपके स्क्रीनशॉट पढ़ रहे हैं</string>
+    <string name="timeline_scan_pick_up">जहाँ Deja रुका था, वहीं से शुरू करें</string>
+    <string name="timeline_scan_just_a_moment">बस एक पल</string>
+    <string name="timeline_scan_reread_progress">%2$d में से %1$d दोबारा पढ़े · सब कुछ सर्च होता रहेगा</string>
+    <string name="timeline_scan_read_progress_remaining">%2$d में से %1$d पढ़े · %3$d बाक़ी</string>
+    <string name="timeline_scan_read_progress">%2$d में से %1$d पढ़े</string>
+    <string name="timeline_scan_resume">फिर शुरू करें</string>
+    <string name="timeline_scan_stop">रोकें</string>
+
+    <!-- Timeline: partial photo access banner -->
+    <string name="timeline_partial_title">Deja सिर्फ़ आपके चुने हुए स्क्रीनशॉट देख सकता है</string>
+    <string name="timeline_partial_body">फ़ोन पर बाक़ी कुछ भी इसे नहीं दिखता।</string>
+    <string name="timeline_partial_select_more">और चुनें</string>
+
+    <!-- Timeline: reclaimable space banner; shown under a size such as "48 MB" -->
+    <string name="timeline_reclaim_body">ऐसे स्क्रीनशॉट में, जिनकी शायद ज़रूरत नहीं</string>
+    <string name="timeline_reclaim_review">देखें</string>
+
+    <!-- Timeline: filter chips -->
+    <string name="timeline_chip_all">सभी</string>
+    <string name="timeline_chip_see_all">सब देखें</string>
+    <string name="timeline_filter_all">सभी स्क्रीनशॉट</string>
+
+    <!-- Timeline: day headers -->
+    <string name="timeline_today">आज</string>
+    <string name="timeline_yesterday">कल</string>
+    <plurals name="timeline_day_screenshot_count">
+        <item quantity="one">%1$d स्क्रीनशॉट</item>
+        <item quantity="other">%1$d स्क्रीनशॉट</item>
+    </plurals>
+
+    <!-- Timeline: empty states -->
+    <string name="timeline_empty_filtered_title">%1$s में कुछ नहीं</string>
+    <string name="timeline_empty_indexing_title">अभी पढ़ रहे हैं…</string>
+    <string name="timeline_empty_title">यहाँ अभी कुछ नहीं है</string>
+    <string name="timeline_empty_filtered_indexing_body">Deja अभी पढ़ रहा है — पढ़ते-पढ़ते यहाँ चीज़ें आ सकती हैं।</string>
+    <string name="timeline_empty_filtered_body">सब कुछ फिर से देखने के लिए सभी पर टैप करें।</string>
+    <string name="timeline_empty_indexing_body">Deja जैसे-जैसे पढ़ेगा, स्क्रीनशॉट यहाँ दिखेंगे।</string>
+    <string name="timeline_empty_body">कोई स्क्रीनशॉट लें, वह यहाँ दिखेगा।</string>
+    <string name="timeline_empty_show_all">सभी स्क्रीनशॉट दिखाएँ</string>
+
+    <!-- Browse -->
+    <string name="browse_title">ब्राउज़</string>
+    <string name="browse_all_screenshots">सभी स्क्रीनशॉट</string>
+    <string name="browse_kept">सहेजे गए</string>
+    <string name="browse_section_categories">कैटेगरी</string>
+    <string name="browse_categories_empty">Deja जैसे-जैसे आपके स्क्रीनशॉट पढ़ेगा, कैटेगरी यहाँ दिखेंगी।</string>
+    <string name="browse_section_apps">ऐप</string>
+    <string name="browse_apps_empty">Deja ऐप का नाम स्क्रीनशॉट की फ़ाइल के नाम से पढ़ता है। कुछ फ़ोन यह नाम नहीं रखते, इसलिए यह लिस्ट ख़ाली रह सकती है।</string>
+</resources>

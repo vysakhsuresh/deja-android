@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Detail screen -->
+    <string name="detail_title">Screenshot</string>
+    <string name="detail_title_position">%1$d of %2$d</string>
+    <string name="detail_pin_kept_cd">Kept - tap to unkeep</string>
+    <string name="detail_pin_keep_cd">Keep this screenshot</string>
+    <string name="detail_image_cd">Screenshot</string>
+    <string name="detail_zoom_hint">Double-tap to zoom</string>
+    <string name="detail_share">Share</string>
+    <string name="detail_open">Open</string>
+    <string name="detail_share_chooser">Share screenshot</string>
+    <string name="detail_unreadable">Deja couldn\'t read any text in this one — either there is none, or it\'s in a script it has no model for. The screenshot itself is untouched.</string>
+    <string name="detail_nothing_found">Deja didn\'t find anything to act on in this one.</string>
+    <string name="detail_found_heading">Found in this screenshot</string>
+    <string name="detail_sensitive_note">ID and card numbers stay hidden until you tap them. Deja can\'t send them anywhere, but a glance over your shoulder is still a thing.</string>
+    <string name="detail_copied">Copied</string>
+    <string name="detail_meta_devanagari">Devanagari</string>
+    <string name="detail_meta_kept">Kept</string>
+    <string name="detail_all_from_app">All from %1$s</string>
+    <string name="detail_show_text">Show the text Deja read</string>
+    <string name="detail_hide_text">Hide the text Deja read</string>
+    <string name="detail_reveal">Reveal</string>
+    <string name="detail_close">Close</string>
+
+    <!-- Things you can do with a found value -->
+    <string name="action_call">Call</string>
+    <string name="action_message">Message</string>
+    <string name="action_save_contact">Save contact</string>
+    <string name="action_email">Email</string>
+    <string name="action_open">Open</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_find_in_deja">Find in Deja</string>
+</resources>

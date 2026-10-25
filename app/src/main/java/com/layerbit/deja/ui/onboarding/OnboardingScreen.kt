@@ -21,9 +21,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.layerbit.deja.R
 import com.layerbit.deja.ui.components.TapTarget
 import com.layerbit.deja.ui.components.tappable
 import com.layerbit.deja.ui.theme.DejaColors
@@ -60,9 +62,9 @@ fun OnboardingScreen(
         ) {
             Text(
                 text = if (canAskAgain) {
-                    "You've already seen it.\nNow you can find it."
+                    stringResource(R.string.onboarding_headline)
                 } else {
-                    "Deja needs your\nscreenshots folder."
+                    stringResource(R.string.onboarding_headline_blocked)
                 },
                 color = DejaColors.Text,
                 fontSize = 30.sp,
@@ -72,12 +74,9 @@ fun OnboardingScreen(
             Spacer(Modifier.height(18.dp))
             Text(
                 text = if (canAskAgain) {
-                    "Deja reads your screenshots so you can search them in words instead of " +
-                        "scrolling for them. To do that it needs to see your Screenshots folder."
+                    stringResource(R.string.onboarding_body)
                 } else {
-                    "Android won't show the permission prompt again after it has been declined, " +
-                        "so it has to be switched on by hand. Open Settings → Permissions → " +
-                        "Photos and videos, and choose Allow all."
+                    stringResource(R.string.onboarding_body_blocked)
                 },
                 color = DejaColors.Muted,
                 fontSize = 15.sp,
@@ -100,8 +99,7 @@ fun OnboardingScreen(
             )
             Spacer(Modifier.size(11.dp))
             Text(
-                text = "Reading happens entirely on this phone. Deja has no internet " +
-                    "permission at all, so nothing it reads can be sent anywhere.",
+                text = stringResource(R.string.onboarding_privacy_note),
                 color = DejaColors.Muted,
                 fontSize = 12.5.sp,
                 lineHeight = 18.sp
@@ -111,14 +109,18 @@ fun OnboardingScreen(
         Spacer(Modifier.height(12.dp))
 
         PrimaryButton(
-            label = if (canAskAgain) "Choose the screenshots folder" else "Open Deja's settings",
+            label = if (canAskAgain) {
+                stringResource(R.string.onboarding_choose_folder)
+            } else {
+                stringResource(R.string.onboarding_open_settings)
+            },
             onClick = if (canAskAgain) onRequest else onOpenSettings
         )
 
         if (!canAskAgain) {
             Spacer(Modifier.height(10.dp))
             Text(
-                text = "Already granted it? Come back and Deja will pick it up.",
+                text = stringResource(R.string.onboarding_come_back),
                 color = DejaColors.Dim,
                 fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth(),
